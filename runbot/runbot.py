@@ -158,7 +158,7 @@ class runbot_repo(osv.osv):
         'nginx': fields.boolean('Nginx'),
         'auto': fields.boolean('Auto'),
         'fallback_id': fields.many2one('runbot.repo', 'Fallback repo'),
-        'modules': fields.char("Modules to Install"),
+        'modules': fields.char("Modules to Install", help="Comma-separated list of modules to install and test."),
         'token': fields.char("Github token"),
     }
     _defaults = {
@@ -266,6 +266,7 @@ class runbot_repo(osv.osv):
                     'name': sha,
                     'author': author,
                     'subject': subject,
+                    'modules': branch.repo_id.modules,
                 }
                 Build.create(cr, uid, build_info)
 
@@ -436,6 +437,7 @@ class runbot_build(osv.osv):
         'date': fields.datetime('Commit date'),
         'author': fields.char('Author'),
         'subject': fields.text('Subject'),
+        'modules': fields.char("Modules to Install"),
         'sequence': fields.integer('Sequence'),
         'result': fields.char('Result'), # ok, ko, warn, skipped, killed
         'pid': fields.integer('Pid'),
@@ -514,8 +516,10 @@ class runbot_build(osv.osv):
 
             # fallback for addons-only community/projet branches
             if not os.path.isfile(build.server('__init__.py')):
-                l = glob.glob(build.path('*/__openerp__.py'))
-                for i in l:
+                # Find modules to test and store in build
+                modules_to_test = glob.glob(build.path('*/__openerp__.py'))
+                build.write({'modules': ','.join(modules_to_test)})
+                for i in modules_to_test:
                     shutil.move(os.path.dirname(i), build.server('addons'))
                 name = build.branch_id.branch_name.split('-',1)[0]
                 if build.repo_id.fallback_id:
@@ -552,8 +556,8 @@ class runbot_build(osv.osv):
                 server_path = build.path("bin/openerp-server.py")
 
             # modules
-            if build.repo_id.modules:
-                modules = build.repo_id.modules
+            if build.modules:
+                modules = build.modules
             else:
                 l = glob.glob(build.server('addons', '*', '__init__.py'))
                 modules = set(os.path.basename(os.path.dirname(i)) for i in l)
