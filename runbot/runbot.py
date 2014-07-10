@@ -501,9 +501,16 @@ class runbot_build(osv.osv):
         repos
         """
         name = branch.branch_name
+        # Use github API to find name of branch on which the PR is made
+        if name.startswith('refs/pull/'):
+            pull_number = name[len('refs/pull/'):]
+            pr = repo.github('/repos/:owner/:repo/pulls/%s' % pull_number)
+            name = 'refs/heads/' + pr['base']['ref']
+        # Find common branch names between repo and target repo
         possible_repo_branches = set([i.branch_name for i in repo.branch_ids if i.name.startswith('refs/heads')])
         possible_target_branches = set([i.branch_name for i in target_repo.branch_ids if i.name.startswith('refs/heads')])
         possible_branches = possible_repo_branches.intersection(possible_target_branches)
+        # If all else fails, use git history to find base
         if name not in possible_branches:
             common_refs = {}
             for target_branch_name in possible_branches:
