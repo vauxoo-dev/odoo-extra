@@ -572,8 +572,6 @@ class runbot_build(osv.osv):
             # v6 rename bin -> openerp
             if os.path.isdir(build.path('bin/addons')):
                 shutil.move(build.path('bin'), build.server())
-            
-            
             # fallback for addons-only community/project branches
             if not os.path.isfile(build.server('__init__.py')):
                 # Use modules to test previously configured in the repository
@@ -591,7 +589,7 @@ class runbot_build(osv.osv):
                 # Finally move all addons to openerp/addons
                 for module in glob.glob(build.path('*/__openerp__.py')):
                     shutil.move(os.path.dirname(module), build.path('openerp/addons'))
-            
+
             # move all addons to server addons path
             for i in glob.glob(build.path('addons/*')):
                 if not os.path.exists( build.server('addons', os.path.basename( i ) ) ):
@@ -659,7 +657,6 @@ class runbot_build(osv.osv):
         return cmd, modules
 
     def spawn(self, cmd, lock_path, log_path, cpu_limit=None, shell=False, showstderr=False):
-        print "cmd", cmd#TODO: Add to log runbot
         def preexec_fn():
             os.setsid()
             if cpu_limit:
