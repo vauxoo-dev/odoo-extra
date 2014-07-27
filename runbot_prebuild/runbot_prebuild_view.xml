@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <!-- Pre-Builds Branch-->
+        <record id="view_prebuild_branch_form" model="ir.ui.view">
+            <field name="model">runbot.prebuild.branch</field>
+            <field name="arch" type="xml">
+                <form string="Pre-Build" version="7.0">
+                    <sheet>
+                        <group>
+                            <field name="branch_id"/>
+                            <field name="check_pr"/>
+                            <field name="revision_id"/>
+                            <field name="repo_id"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="view_prebuild_branch_tree" model="ir.ui.view">
+            <field name="model">runbot.prebuild.branch</field>
+            <field name="arch" type="xml">
+                <tree string="Pre-Builds">
+                    <field name="branch_id"/>
+                    <field name="check_pr"/>
+                    <field name="revision_id"/>
+                    <field name="repo_id"/>
+                </tree>
+            </field>
+        </record>
+        <!-- Pre-Builds -->
+        <record id="view_prebuild_form" model="ir.ui.view">
+            <field name="model">runbot.prebuild</field>
+            <field name="arch" type="xml">
+                <form string="Pre-Build" version="7.0">
+<!--                    <header>
+                         <button name="reset" type="object" string="Reset"/>
+                    </header>-->
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="main_branch_id"/>
+                            <field name="prebuild_branch_ids"/>
+                            <field name="repo_id"/>
+                            <field name="sticky"/>
+                            <field name="modules"/>
+                            <field name="modules_to_exclude"/>
+                            <field name="language"/>
+                            <field name="script_prebuild"/>
+                            <field name="script_posbuild"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="view_prebuild_tree" model="ir.ui.view">
+            <field name="model">runbot.prebuild</field>
+            <field name="arch" type="xml">
+                <tree string="Pre-Builds">
+                    <field name="name"/>
+                    <field name="main_branch_id"/>
+                    <field name="prebuild_branch_ids"/>
+                    <field name="repo_id"/>
+                    <field name="sticky"/>
+                    <field name="modules"/>
+                    <field name="modules_to_exclude"/>
+                    <field name="language"/>
+                    <field name="script_prebuild"/>
+                    <field name="script_posbuild"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_prebuild_search" model="ir.ui.view">
+            <field name="model">runbot.prebuild</field>
+            <field name="arch" type="xml">
+                <search string="Search Pre-builds">
+                    <field name="main_branch_id"/>
+                    <field name="name"/>
+                    <field name="repo_id"/>
+                    <field name="sticky"/>
+                    <field name="modules"/>
+                    <field name="modules_to_exclude"/>
+                    <field name="language"/>
+                    <field name="script_prebuild"/>
+                    <field name="script_posbuild"/>
+                </search>
+            </field>
+        </record>
+        <record id="action_prebuild" model="ir.actions.act_window">
+            <field name="name">Pre-Builds</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">runbot.prebuild</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+        <menuitem id="menu_prebuild" action="action_prebuild" parent="runbot.menu_runbot"/>
+    </data>
+</openerp>
