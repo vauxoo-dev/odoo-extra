@@ -73,7 +73,7 @@ class runbot_build(osv.osv):
             required=False, help="This is the origin of instance data."),
     }
     
-    def checkout_params(self, cr, uid, ids, main_branch_id, module_branch_ids, context=None):
+    def checkout_params(self, cr, uid, ids, main_branch_id, module_branch_ids, modules_to_test=None, context=None):
         branch_obj = self.pool.get('runbot.branch')
         main_branch = branch_obj.browse(cr, uid, [main_branch_id], context=context)[0]
         for build in self.browse(cr, uid, ids, context=context):
@@ -103,9 +103,18 @@ class runbot_build(osv.osv):
                 for module_branch in branch_obj.browse(cr, uid, module_branch_ids, context=context):
                     #TODO: main_branch.name or sha_commit
                     module_branch.repo_id.git_export(module_branch.name, build.server("addons"))
-                    #Note: If a module name is duplicate no make error. TODO: But is good make info.
+                    #Note: If a module name is duplicate no make error. TODO: But is good make a log.info.
+            """
+            #This funtion there is into cmd function
+            if not modules_to_test:
+                #Find modules to test from the folder branch
+                modules_to_test = ','.join(
+                    os.path.basename(os.path.dirname(module_openerp))
+                    for module_openerp in glob.glob(build.path('*/__openerp__.py'))
+                )
+            """
+            build.write({'modules': modules_to_test})
 
-    
     def checkout(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
             build.prebuild_id = self.pool.get('runbot.prebuild').browse(cr, uid, [4], context=context)[0]#Delete this line, only is for test
@@ -115,5 +124,5 @@ class runbot_build(osv.osv):
             else:
                 main_branch_id = build.prebuild_id.main_branch_id.id
                 module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
-                self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, context=context)
+                self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, modules_to_test=build.prebuild_id.modules, context=context)
                 

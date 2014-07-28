@@ -46,7 +46,7 @@
                             <field name="repo_id"/>
                             <field name="sticky"/>
                             <field name="modules"/>
-                            <field name="modules_to_exclude"/>
+                            <!--<field name="modules_to_exclude"/>-->
                             <field name="language"/>
                             <field name="script_prebuild"/>
                             <field name="script_posbuild"/>
@@ -65,7 +65,7 @@
                     <field name="repo_id"/>
                     <field name="sticky"/>
                     <field name="modules"/>
-                    <field name="modules_to_exclude"/>
+                    <!--<field name="modules_to_exclude"/>-->
                     <field name="language"/>
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>
