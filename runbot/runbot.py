@@ -237,11 +237,15 @@ class runbot_repo(osv.osv):
             self.update_git(cr, uid, repo)
 
     def update_git(self, cr, uid, repo, context=None):
+        if context is None:
+            context = {}
         _logger.debug('repo %s updating branches', repo.name)
 
         Build = self.pool['runbot.build']
         Branch = self.pool['runbot.branch']
-
+        create_builds = context.get('create_builds', True)
+        build_new_ids = []
+        
         if not os.path.isdir(os.path.join(repo.path)):
             os.makedirs(repo.path)
         if not os.path.isdir(os.path.join(repo.path, 'refs')):
@@ -256,7 +260,7 @@ class runbot_repo(osv.osv):
         git_refs = git_refs.strip()
 
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-
+        
         for name, sha, date, author, subject in refs:
             # create or get branch
             branch_ids = Branch.search(cr, uid, [('repo_id', '=', repo.id), ('name', '=', name)])
@@ -275,17 +279,18 @@ class runbot_repo(osv.osv):
                 if not branch.sticky:
                     to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending')])
                     Build.skip(cr, uid, to_be_skipped_ids)
-
-                _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
-                build_info = {
-                    'branch_id': branch.id,
-                    'name': sha,
-                    'author': author,
-                    'subject': subject,
-                    'date': dateutil.parser.parse(date[:19]),
-                    'modules': branch.repo_id.modules,
-                }
-                Build.create(cr, uid, build_info)
+                if create_builds:#If create_builds==True then make repo as origin process. But if create_builds==False, make repo from pre-build
+                    _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
+                    build_info = {
+                        'branch_id': branch.id,
+                        'name': sha,
+                        'author': author,
+                        'subject': subject,
+                        'date': dateutil.parser.parse(date[:19]),
+                        'modules': branch.repo_id.modules,
+                    }
+                    build_new_ids.append( Build.create(cr, uid, build_info) )
+        return build_new_ids
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
@@ -492,6 +497,7 @@ class runbot_build(osv.osv):
             if self.browse(cr, uid, duplicate_ids[0]).state != 'pending':
                 self.github_status(cr, uid, [build_id])
         self.write(cr, uid, [build_id], extra_info, context=context)
+        return build_id
 
     def reset(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, { 'state' : 'pending' }, context=context)

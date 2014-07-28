@@ -5,6 +5,7 @@ import os
 import shutil
 import logging
 import glob
+import time
 
 _logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class runbot_prebuild_branch(osv.osv):
             relation="runbot.repo", string="Repository", readonly=True, store=True, 
             ondelete='cascade', select=1),
     }
+    
 
 class runbot_prebuild(osv.osv):
     _name = "runbot.prebuild"
@@ -59,6 +61,37 @@ class runbot_prebuild(osv.osv):
         'script_posbuild': fields.text('Script Pos-Build', 
             help="Script to execute after run build"),
     }
+
+    def create_build(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        repo_obj = self.pool.get('runbot.repo')
+        build_obj = self.pool.get('runbot.build')
+        build_ids = []
+        for prebuild in self.browse(cr, uid, ids, context=context):
+            main_repository = prebuild.main_branch_id.repo_id
+            module_repositories = [prebuild_branch.branch_id.repo_id for prebuild_branch in prebuild.module_branch_ids]
+            
+            #Update repository but no create default build
+            context.update({'create_builds': False})
+            repo_obj.update_git(cr, uid, main_repository, context=context)
+            for prebuild_branch in prebuild.module_branch_ids:
+                repo_obj.update_git(cr, uid, prebuild_branch.branch_id.repo_id, context=context)
+            
+            #import pdb;pdb.set_trace()
+            build_info = {
+                'branch_id': prebuild.main_branch_id.id,
+                'name': prebuild.name,#TODO: Get this value
+                'author': prebuild.name,#TODO: Get this value
+                'subject': prebuild.name,#TODO: Get this value
+                'date': time.strftime("%Y-%m-%d %H:%M:%S"),#TODO: Get this value
+                'modules': prebuild.modules,
+                
+                'prebuild_id': prebuild.id,#Important field for custom build and custom checkout
+            }
+            build_id = build_obj.create(cr, uid, build_info)
+            build_ids.append( build_id )
+        return build_ids
 
 class runbot_branch(osv.osv):
     _inherit = "runbot.branch"
@@ -104,8 +137,7 @@ class runbot_build(osv.osv):
                     #TODO: main_branch.name or sha_commit
                     module_branch.repo_id.git_export(module_branch.name, build.server("addons"))
                     #Note: If a module name is duplicate no make error. TODO: But is good make a log.info.
-            """
-            #This funtion there is into cmd function
+            """#This funtion there is into cmd function
             if not modules_to_test:
                 #Find modules to test from the folder branch
                 modules_to_test = ','.join(
@@ -117,7 +149,6 @@ class runbot_build(osv.osv):
 
     def checkout(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
-            build.prebuild_id = self.pool.get('runbot.prebuild').browse(cr, uid, [4], context=context)[0]#Delete this line, only is for test
             if not build.prebuild_id:
                 #TODO: Split branches for use same function "checkout_params"
                 return super(runbot_build, self).checkout(cr, uid, ids, context=context)
@@ -125,4 +156,3 @@ class runbot_build(osv.osv):
                 main_branch_id = build.prebuild_id.main_branch_id.id
                 module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
                 self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, modules_to_test=build.prebuild_id.modules, context=context)
-                
