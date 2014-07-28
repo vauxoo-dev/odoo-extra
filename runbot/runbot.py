@@ -300,12 +300,22 @@ class runbot_repo(osv.osv):
         Build.skip(cr, uid, to_be_skipped_ids)
 
     def scheduler(self, cr, uid, ids=None, context=None):
+        if context is None:
+            context = {}
+        build_ids = context.get('build_ids', []) or []
         icp = self.pool['ir.config_parameter']
         workers = int(icp.get_param(cr, uid, 'runbot.workers', default=6))
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
 
         Build = self.pool['runbot.build']
-        domain = [('repo_id', 'in', ids)]
+
+        domain = []
+        if build_ids:
+            domain.append( ('id', 'in', build_ids) )
+        if ids:
+            domain.append( ('repo_id', 'in', ids) )
+        if len(domain) == 2:
+            domain.insert(0, '|')
 
         # schedule jobs (transitions testing -> running, kill jobs, ...)
         build_ids = Build.search(cr, uid, domain + [('state', 'in', ['testing', 'running'])])
@@ -836,6 +846,7 @@ class runbot_build(osv.osv):
                     'name': build.name,
                     'author': build.author,
                     'subject': build.subject,
+                    'prebuild_id': build.prebuild_id.id
                 }
                 self.create(cr, 1, new_build, context=context)
             return build.repo_id.id

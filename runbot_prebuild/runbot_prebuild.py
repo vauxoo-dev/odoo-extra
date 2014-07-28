@@ -77,8 +77,7 @@ class runbot_prebuild(osv.osv):
             repo_obj.update_git(cr, uid, main_repository, context=context)
             for prebuild_branch in prebuild.module_branch_ids:
                 repo_obj.update_git(cr, uid, prebuild_branch.branch_id.repo_id, context=context)
-            
-            #import pdb;pdb.set_trace()
+
             build_info = {
                 'branch_id': prebuild.main_branch_id.id,
                 'name': prebuild.name,#TODO: Get this value
@@ -105,6 +104,13 @@ class runbot_build(osv.osv):
         'prebuild_id': fields.many2one('runbot.prebuild', string='Runbot Pre-Build', 
             required=False, help="This is the origin of instance data."),
     }
+    
+    def force_schedule(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        context.update({'build_ids': ids})
+        build_obj = self.pool.get('runbot.repo')
+        return build_obj.scheduler(cr, uid, ids=None, context=context)
     
     def checkout_params(self, cr, uid, ids, main_branch_id, module_branch_ids, modules_to_test=None, context=None):
         branch_obj = self.pool.get('runbot.branch')
@@ -156,3 +162,4 @@ class runbot_build(osv.osv):
                 main_branch_id = build.prebuild_id.main_branch_id.id
                 module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
                 self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, modules_to_test=build.prebuild_id.modules, context=context)
+                
