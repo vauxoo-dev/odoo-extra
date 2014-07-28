@@ -73,7 +73,7 @@ class runbot_build(osv.osv):
             required=False, help="This is the origin of instance data."),
     }
     
-    def checkout_params(self, cr, uid, ids, main_branch_id, module_branch_ids, commit_sha=None, context=None):
+    def checkout_params(self, cr, uid, ids, main_branch_id, module_branch_ids, context=None):
         branch_obj = self.pool.get('runbot.branch')
         main_branch = branch_obj.browse(cr, uid, [main_branch_id], context=context)[0]
         for build in self.browse(cr, uid, ids, context=context):
@@ -86,7 +86,8 @@ class runbot_build(osv.osv):
             mkdirs([build.path("logs"), build.server('addons')])
 
             # checkout main branch
-            main_branch.repo_id.git_export(commit_sha or main_branch.name, build.path())
+            #TODO: main_branch.name or sha_commit
+            main_branch.repo_id.git_export(main_branch.name, build.path())
 
             # TODO use git log to get commit message date and author
 
@@ -100,7 +101,8 @@ class runbot_build(osv.osv):
             
             if module_branch_ids:
                 for module_branch in branch_obj.browse(cr, uid, module_branch_ids, context=context):
-                    module_branch.repo_id.git_export(commit_sha or module_branch.name, build.server("addons"))
+                    #TODO: main_branch.name or sha_commit
+                    module_branch.repo_id.git_export(module_branch.name, build.server("addons"))
                     #Note: If a module name is duplicate no make error. TODO: But is good make info.
 
     
@@ -113,5 +115,5 @@ class runbot_build(osv.osv):
             else:
                 main_branch_id = build.prebuild_id.main_branch_id.id
                 module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
-                self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, commit_sha=build.prebuild_id, context=context)
+                self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, context=context)
                 
