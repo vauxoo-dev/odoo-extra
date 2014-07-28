@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <openerp>
     <data>
+    
         <!-- Pre-Builds Branch-->
         <record id="view_prebuild_branch_form" model="ir.ui.view">
             <field name="model">runbot.prebuild.branch</field>
@@ -10,7 +11,7 @@
                         <group>
                             <field name="branch_id"/>
                             <field name="check_pr"/>
-                            <field name="revision_id"/>
+                            <field name="sha_commit"/>
                             <field name="repo_id"/>
                         </group>
                     </sheet>
@@ -23,11 +24,12 @@
                 <tree string="Pre-Builds">
                     <field name="branch_id"/>
                     <field name="check_pr"/>
-                    <field name="revision_id"/>
+                    <field name="sha_commit"/>
                     <field name="repo_id"/>
                 </tree>
             </field>
         </record>
+        
         <!-- Pre-Builds -->
         <record id="view_prebuild_form" model="ir.ui.view">
             <field name="model">runbot.prebuild</field>
@@ -40,7 +42,7 @@
                         <group>
                             <field name="name"/>
                             <field name="main_branch_id"/>
-                            <field name="prebuild_branch_ids"/>
+                            <field name="module_branch_ids"/>
                             <field name="repo_id"/>
                             <field name="sticky"/>
                             <field name="modules"/>
@@ -59,7 +61,7 @@
                 <tree string="Pre-Builds">
                     <field name="name"/>
                     <field name="main_branch_id"/>
-                    <field name="prebuild_branch_ids"/>
+                    <field name="module_branch_ids"/>
                     <field name="repo_id"/>
                     <field name="sticky"/>
                     <field name="modules"/>
