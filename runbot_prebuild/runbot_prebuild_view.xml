@@ -35,9 +35,9 @@
             <field name="model">runbot.prebuild</field>
             <field name="arch" type="xml">
                 <form string="Pre-Build" version="7.0">
-<!--                    <header>
-                         <button name="reset" type="object" string="Reset"/>
-                    </header>-->
+                    <header>
+                         <button name="create_build" type="object" string="Create build"/>
+                    </header>
                     <sheet>
                         <group>
                             <field name="name"/>
@@ -96,5 +96,17 @@
             <field name="view_mode">tree,form</field>
         </record>
         <menuitem id="menu_prebuild" action="action_prebuild" parent="runbot.menu_runbot"/>
+
+        <!--inherit runbot.build-->
+        <record id="view_build_form_inh_prebuild_01" model="ir.ui.view">
+            <field name="model">runbot.build</field>
+            <field name="inherit_id" ref="runbot.view_build_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="prebuild_id"/>
+                </xpath>
+            </field>
+        </record>
+
     </data>
 </openerp>
