@@ -236,7 +236,7 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             self.update_git(cr, uid, repo)
 
-    def update_git(self, cr, uid, repo, context=None):
+    def update_git(self, cr, uid, repo, prebuild=None, context=None):
         if context is None:
             context = {}
         _logger.debug('repo %s updating branches', repo.name)
@@ -245,6 +245,8 @@ class runbot_repo(osv.osv):
         Branch = self.pool['runbot.branch']
         create_builds = context.get('create_builds', True)
         build_new_ids = []
+        
+        prebuild_id = prebuild and prebuild.id or False
         
         if not os.path.isdir(os.path.join(repo.path)):
             os.makedirs(repo.path)
@@ -277,20 +279,20 @@ class runbot_repo(osv.osv):
             build_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('name', '=', sha)])
             if not build_ids:
                 if not branch.sticky:
-                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending')])
+                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('prebuild_id', '=', prebuild_id)])
                     Build.skip(cr, uid, to_be_skipped_ids)
                 if create_builds:#If create_builds==True then make repo as origin process. But if create_builds==False, make repo from pre-build
                     _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
                     build_info = {
                         'branch_id': branch.id,
-                        'name': sha,
+                        'name': prebuild and prebuild.name or sha,
                         'author': author,
                         'subject': subject,
                         'date': dateutil.parser.parse(date[:19]),
                         'modules': branch.repo_id.modules,
+                        'prebuild_id': prebuild_id,
                     }
                     build_new_ids.append( Build.create(cr, uid, build_info) )
-        return build_new_ids
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
@@ -298,6 +300,7 @@ class runbot_repo(osv.osv):
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
         to_be_skipped_ids = Build.search(cr, uid, skippable_domain, order='sequence desc', offset=running_max)
         Build.skip(cr, uid, to_be_skipped_ids)
+        return build_new_ids
 
     def scheduler(self, cr, uid, ids=None, context=None):
         if context is None:
