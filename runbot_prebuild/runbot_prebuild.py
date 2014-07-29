@@ -76,7 +76,7 @@ class runbot_prebuild(osv.osv):
             context.update({'create_builds': False})
             repo_obj.update_git(cr, uid, main_repository, context=context)
             for prebuild_branch in prebuild.module_branch_ids:
-                repo_obj.update_git(cr, uid, prebuild_branch.branch_id.repo_id, context=context)
+                repo_obj.update_git(cr, uid, prebuild_branch.branch_id.repo_id, prebuild=prebuild, context=context)
 
             build_info = {
                 'branch_id': prebuild.main_branch_id.id,
@@ -94,8 +94,19 @@ class runbot_prebuild(osv.osv):
 
 class runbot_branch(osv.osv):
     _inherit = "runbot.branch"
-    #TODO: get_name -> branch.repo_id.name + branch.name
-    #TODO: name search -> branch.repo_id.name + branch.name
+    
+    def name_get(self, cr, uid, ids, context=None):
+        if isinstance(ids, (list, tuple)) and not len(ids):
+            return []
+        if isinstance(ids, (long, int)):
+            ids = [ids]
+        res_name = super(runbot_branch, self).name_get(cr, uid, ids, context=context)
+        res = []
+        for record in res_name:
+            branch = self.browse(cr, uid, [record[0]], context=context)[0]
+            name = '[' + record[1] + '] ' + branch.repo_id.name
+            res.append((record[0], name))
+        return res
 
 class runbot_build(osv.osv):
     _inherit = "runbot.build"
@@ -104,7 +115,7 @@ class runbot_build(osv.osv):
         'prebuild_id': fields.many2one('runbot.prebuild', string='Runbot Pre-Build', 
             required=False, help="This is the origin of instance data."),
     }
-    
+
     def force_schedule(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
