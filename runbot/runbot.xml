@@ -66,6 +66,8 @@
                         <field name="branch_url"/>
                         <field name="sticky"/>
                         <field name="state"/>
+                        <field name="branch_base_name"/>
+                        <field name="branch_base_id"/>
                     </group>
                 </sheet>
             </form>
@@ -79,6 +81,8 @@
                 <field name="name"/>
                 <field name="sticky"/>
                 <field name="state"/>
+                <field name="branch_base_name"/>
+                <field name="branch_base_id"/>
             </tree>
         </field>
     </record>

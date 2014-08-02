@@ -31,6 +31,12 @@ from openerp.osv import fields, osv
 from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 
+try:
+    from github import Github
+except:
+    Github = False
+    pass#Add warning to install this library
+
 _logger = logging.getLogger(__name__)
 
 #----------------------------------------------------------
@@ -162,11 +168,18 @@ class runbot_repo(osv.osv):
             name = name.replace(':','/')
             result[repo.id] = name
         return result
+    
+    def _get_base_short(self, cr, uid, ids, field_name, arg, context=None):
+        #TODO: Make it field_names in plural.
+        #TODO: Put here get base github "odoo/odoo"
+        for repo in self.browse(cr, uid, ids, context=context):
+            repo.base
 
     _columns = {
         'name': fields.char('Repository', required=True),
         'path': fields.function(_get_path, type='char', string='Directory', readonly=1),
         'base': fields.function(_get_base, type='char', string='Base URL', readonly=1),
+        'base_short': fields.function(_get_base_short, type='char', string='Base URL short for pygithub', readonly=1),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
         'jobs': fields.char('Jobs'),
@@ -180,11 +193,14 @@ class runbot_repo(osv.osv):
             string='Extra dependencies',
             help="Community addon repos which need to be present to run tests."),
         'token': fields.char("Github token"),
+        'active': fields.boolean('Active'),
     }
+    
     _defaults = {
         'testing': 1,
         'running': 1,
         'auto': True,
+        'active': True,
     }
 
     def domain(self, cr, uid, context=None):
@@ -201,6 +217,7 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             cmd = ['git', '--git-dir=%s' % repo.path] + cmd
             _logger.info("git: %s", ' '.join(cmd))
+            print "git: %s"%( ' '.join(cmd) )#Remove this line
             return subprocess.check_output(cmd)
 
     def git_export(self, cr, uid, ids, treeish, dest, context=None):
@@ -216,11 +233,12 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             if not repo.token:
                 raise Exception('Repository does not have a token to authenticate')
-            match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
+            match_object = re.search ('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
             if match_object:
                 url = url.replace(':owner', match_object.group(2))
-                url = url.replace(':repo', match_object.group(3))
+                url = url.replace(':repo', match_object.group(3).replace('.git', ''))#TODO: Modify regex for remove .git
                 url = 'https://api.%s%s' % (match_object.group(1),url)
+                print "url",url #Delete this line
                 session = requests.Session()
                 session.auth = (repo.token,'x-oauth-basic')
                 session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
@@ -250,15 +268,16 @@ class runbot_repo(osv.osv):
             repo.git(['fetch', '-p', 'origin', '+refs/heads/*:refs/heads/*'])
             repo.git(['fetch', '-p', 'origin', '+refs/pull/*/head:refs/pull/*'])
 
-        fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
+        fields = ['refname','objectname','committerdate:iso8601','authorname','subject', ]
         fmt = "%00".join(["%("+field+")" for field in fields])
         git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', 'refs/heads', 'refs/pull'])
         git_refs = git_refs.strip()
 
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-
+        
         for name, sha, date, author, subject in refs:
             # create or get branch
+#            if 'pull' in name and Github:
             branch_ids = Branch.search(cr, uid, [('repo_id', '=', repo.id), ('name', '=', name)])
             if branch_ids:
                 branch_id = branch_ids[0]
@@ -284,6 +303,10 @@ class runbot_repo(osv.osv):
                     'subject': subject,
                     'date': dateutil.parser.parse(date[:19]),
                     'modules': branch.repo_id.modules,
+                    #'branch_head_id': 
+                    #'dependency_branch_id':
+                    #'dependency_sha':
+#                    #'branch_parent_id': False,#TODO: Get parent branch from PR
                 }
                 Build.create(cr, uid, build_info)
 
@@ -377,7 +400,73 @@ class runbot_repo(osv.osv):
 class runbot_branch(osv.osv):
     _name = "runbot.branch"
     _order = 'name'
+    """
+    def _get_branch_base_name(self, cr, uid, ids, field_name, arg, context=None):
+        r = {}
+        for branch in self.browse(cr, uid, ids, context=context):
+            r[branch.id] = False
+            if branch.name.startswith('refs/pull/'):
+                if branch.repo_id.token:
+                    #g = Github(client_secret=branch.repo_id.token)#IF empty no problem with public repositories
+                    #g.get_repo
+                    pull_number = branch.name[len('refs/pull/'):]
+                    #https://api.github.com/repos/odoo/odoo/pulls/1#GOOD
+                    pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s' % pull_number)
+                    if 'Not Found' == pr.get('message'):
+                        pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s/merge' % pull_number)
+                    if 'Not Found' == pr.get('message'):
+                        continue
+                    name = pr['base']['ref']
+                    print "branch.id,branch.repo_id.name,name",branch.id, branch.name, branch.repo_id.name, name
+                    r[branch.id] = name
+                else:
+                    branch_head_ids = self.search(cr, uid, [
+                        ('repo_id.id', '=', branch.repo_id.id),
+                        ('name', 'like', 'refs/heads/%'),
+                    ])
+                    branch_head_names = self.read(cr, uid, branch_head_ids, ['branch_name'], context=context)
+                    common_refs = {}
+                    for branch_head_name in branch_head_names:
+                        commit = branch.repo_id.git(['merge-base', branch.name, branch_head_name['branch_name']]).strip()
+                        cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
+                        common_refs[ branch_head_name[ 'branch_name' ] ] = branch.repo_id.git(cmd).strip()
+                    if common_refs:
+                        name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
+                        r[branch.id] = name
+                        print "branch.id,branch.repo_id.name,name",branch.id, branch.name, branch.repo_id.name, name
+                        #Encontro 8.0 y master en el pr1 de odoo
+        return r
 
+    def _get_branch_base_id(self, cr, uid, ids, field_name, arg, context=None):
+        r = {}
+        #import pdb;pdb.set_trace()
+        for branch in self.browse(cr, uid, ids, context=context):
+            res = branch.repo_id.search([
+                ('repo_id', '=', branch.repo_id.id), 
+                ('branch_name', '=', branch.branch_base_name),
+            ])
+            if res:
+                r[branch.id] = res[0]
+            else:
+                r[branch.id] = False
+        return r
+    """
+
+    def _get_branch_title_info(self, cr, uid, ids, field_name, arg, context=None):
+        res = {}
+        #import pdb;pdb.set_trace()
+        for branch in self.browse(cr, uid, ids, context=context):
+            res[branch.id] = {
+                'branch_name': False,
+                'branch_url': False,
+            }
+            res[branch.id] = branch.name.split('/')[-1]
+            if re.match('^[0-9]+$', branch.branch_name):
+                r[branch.id] = "https://%s/pull/%s" % (branch.repo_id.base, branch.branch_name)
+            else:
+                r[branch.id] = "https://%s/tree/%s" % (branch.repo_id.base, branch.branch_name)
+        return res
+    """
     def _get_branch_name(self, cr, uid, ids, field_name, arg, context=None):
         r = {}
         for branch in self.browse(cr, uid, ids, context=context):
@@ -392,16 +481,95 @@ class runbot_branch(osv.osv):
             else:
                 r[branch.id] = "https://%s/tree/%s" % (branch.repo_id.base, branch.branch_name)
         return r
+    """
+    def _get_branch_data(self, cr, uid, ids, field_names, arg, context=None):
+        res = {}
+        for branch in self.browse(cr, uid, ids, context=context):
+            res[branch.id] = {
+                'branch_base_name': False,
+                'branch_base_id': False,
+                'branch_name': False,
+                'branch_url': False,
+            }
 
+            if 'branch_name' in field_names or 'branch_url' in field_names:
+                res[branch.id]['branch_name'] = branch.name.split('/')[-1]
+                if re.match('^[0-9]+$', res[branch.id]['branch_name']):
+                    res[branch.id]['branch_url'] = "https://%s/pull/%s" % (branch.repo_id.base.replace('.git', ''), res[branch.id]['branch_name'])
+                else:
+                    res[branch.id]['branch_url'] = "https://%s/tree/%s" % (branch.repo_id.base.replace('.git', ''), res[branch.id]['branch_name'])
+
+            if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
+                if branch.name.startswith('refs/pull/'):
+                    if branch.repo_id.token:
+                        #using github for get branch_base from pr branch
+                        pull_number = branch.name[len('refs/pull/'):]
+                        pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s' % pull_number)
+                        if 'Not Found' == pr.get('message'):
+                            #Search into PR merged
+                            pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s/merge' % pull_number)
+                        if pr.has_key('base'):
+                            res[branch.id]['branch_base_name'] = pr['base']['ref']
+                    else:
+                        #using local branch for get branch_base from pr branch
+                        #import pdb;pdb.set_trace()
+                        branch_head_ids = self.search(cr, uid, [
+                            ('repo_id.id', '=', branch.repo_id.id),
+                            ('name', 'like', 'refs/heads/%'),
+                            ('id', '<>', branch.id),
+                        ])
+                        branch_head_names = self._get_branch_data(cr, uid, branch_head_ids, ['branch_name'], arg=arg, context=context)#No saved into database
+                        common_refs = {}
+                        for branch_head_name in branch_head_names:
+                            bhn = branch_head_names[branch_head_name]['branch_name']
+                            if bhn:
+                                commit = branch.repo_id.git(['merge-base', branch.name, bhn]).strip()
+                                if commit:
+                                    cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
+                                    common_refs[ bhn ] = branch.repo_id.git(cmd).strip()
+                        if common_refs:
+                            name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
+                            res[branch.id]['branch_base_name'] = name
+
+                    if res[branch.id]['branch_base_name']:
+                        branch_base_ids = branch.search([
+                                ('repo_id', '=', branch.repo_id.id), 
+                                ('name', '=', 'refs/heads/%s'%( res[branch.id]['branch_base_name'] ) ),
+                            ])
+                        if branch_base_ids:
+                            res[branch.id]['branch_base_id'] = branch_base_ids[0].id
+        return res
+
+    def _get_branch_from_repo(self, cr, uid, repo_ids, context=None):
+        branch_pool = self.pool.get('runbot.branch')#We need pool.get because is other self source
+        branch_ids = branch_pool.search(cr, uid, [('repo_id', 'in', repo_ids)], context=context)
+        return branch_ids
+    
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
-        'branch_name': fields.function(_get_branch_name, type='char', string='Branch', readonly=1, store=True),
-        'branch_url': fields.function(_get_branch_url, type='char', string='Branch url', readonly=1),
+        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=True),
+        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=True),
         'sticky': fields.boolean('Sticky', select=1),
         'coverage': fields.boolean('Coverage'),
         'state': fields.char('Status'),
+        'branch_base_name': fields.function( _get_branch_data, type='char', 
+            string='Branch base name', readonly=1, multi='branch_data',
+            store={
+                'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+            },
+        ),
+        'branch_base_id': fields.function(_get_branch_data, type='many2one', readonly=1,
+            string='Branch base', relation='runbot.branch', multi='branch_data',
+            store={
+                'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+            },
+        ),
     }
+    
+    _sql_constraints = [
+        ('branch_name_repo_unique', 'unique (name,repo_id)', 'The name of the branch must be unique per repo !')
+    ]
 
 class runbot_build(osv.osv):
     _name = "runbot.build"
@@ -601,6 +769,7 @@ class runbot_build(osv.osv):
                     )
                 build.write({'modules': modules_to_test})
                 hint_branches = set()
+                #import pdb;pdb.set_trace()
                 for extra_repo in build.repo_id.dependency_ids:
                     closest_name = build.get_closest_branch_name(extra_repo.id, hint_branches)
                     hint_branches.add(closest_name)
