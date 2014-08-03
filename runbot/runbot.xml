@@ -20,6 +20,9 @@
                     <group string="Params">
                         <field name="testing"/>
                         <field name="running"/>
+                        <field name="base"/>
+                        <field name="owner"/>
+                        <field name="short_name"/>
                         <field name="auto"/>
                         <field name="jobs"/>
                         <field name="nginx"/>
@@ -42,6 +45,9 @@
                 <field name="testing"/>
                 <field name="running"/>
                 <field name="auto"/>
+                <field name="base"/>
+                <field name="owner"/>
+                <field name="short_name"/>
             </tree>
         </field>
     </record>

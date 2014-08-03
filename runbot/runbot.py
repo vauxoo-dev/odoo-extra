@@ -161,25 +161,32 @@ class runbot_repo(osv.osv):
             result[repo.id] = os.path.join(root, 'repo', name)
         return result
 
-    def _get_base(self, cr, uid, ids, field_name, arg, context=None):
+    def _get_base(self, cr, uid, ids, field_names, arg, context=None):
         result = {}
         for repo in self.browse(cr, uid, ids, context=context):
+            result[repo.id] = {
+                'owner': False,
+                'short_name': False,
+                'base': False,
+            }
             name = re.sub('.+@', '', repo.name)
             name = name.replace(':','/')
-            result[repo.id] = name
+            result[repo.id]['base'] = name
+
+            regex = "((git|https)(://|@))([\w\.]+)(/|:)(?P<owner>[\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
+            match_object = re.search( regex, repo.name )
+            if match_object:
+                result[repo.id]['owner'] = match_object.group("owner")
+                result[repo.id]['short_name'] = match_object.group("repo")
         return result
-    
-    def _get_base_short(self, cr, uid, ids, field_name, arg, context=None):
-        #TODO: Make it field_names in plural.
-        #TODO: Put here get base github "odoo/odoo"
-        for repo in self.browse(cr, uid, ids, context=context):
-            repo.base
 
     _columns = {
         'name': fields.char('Repository', required=True),
         'path': fields.function(_get_path, type='char', string='Directory', readonly=1),
-        'base': fields.function(_get_base, type='char', string='Base URL', readonly=1),
-        'base_short': fields.function(_get_base_short, type='char', string='Base URL short for pygithub', readonly=1),
+        'base': fields.function(_get_base, type='char', string='Base URL', readonly=1, multi='url_info'),
+        'owner': fields.function(_get_base, type='char', string='Owner URL', readonly=1, multi='url_info'),
+        'short_name': fields.function(_get_base, type='char', string='Short name', readonly=1, multi='url_info'),
+        #'base_short': fields.function(_get_base_short, type='char', string='Base URL short for pygithub', readonly=1),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
         'jobs': fields.char('Jobs'),
@@ -227,7 +234,8 @@ class runbot_repo(osv.osv):
             p2 = subprocess.Popen(['tar', '-xC', dest], stdin=p1.stdout, stdout=subprocess.PIPE)
             p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
             p2.communicate()[0]
-
+    
+    
     def github(self, cr, uid, ids, url, payload=None, delete=False, context=None):
         """Return a http request to be sent to github"""
         for repo in self.browse(cr, uid, ids, context=context):
@@ -400,88 +408,7 @@ class runbot_repo(osv.osv):
 class runbot_branch(osv.osv):
     _name = "runbot.branch"
     _order = 'name'
-    """
-    def _get_branch_base_name(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
-        for branch in self.browse(cr, uid, ids, context=context):
-            r[branch.id] = False
-            if branch.name.startswith('refs/pull/'):
-                if branch.repo_id.token:
-                    #g = Github(client_secret=branch.repo_id.token)#IF empty no problem with public repositories
-                    #g.get_repo
-                    pull_number = branch.name[len('refs/pull/'):]
-                    #https://api.github.com/repos/odoo/odoo/pulls/1#GOOD
-                    pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s' % pull_number)
-                    if 'Not Found' == pr.get('message'):
-                        pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s/merge' % pull_number)
-                    if 'Not Found' == pr.get('message'):
-                        continue
-                    name = pr['base']['ref']
-                    print "branch.id,branch.repo_id.name,name",branch.id, branch.name, branch.repo_id.name, name
-                    r[branch.id] = name
-                else:
-                    branch_head_ids = self.search(cr, uid, [
-                        ('repo_id.id', '=', branch.repo_id.id),
-                        ('name', 'like', 'refs/heads/%'),
-                    ])
-                    branch_head_names = self.read(cr, uid, branch_head_ids, ['branch_name'], context=context)
-                    common_refs = {}
-                    for branch_head_name in branch_head_names:
-                        commit = branch.repo_id.git(['merge-base', branch.name, branch_head_name['branch_name']]).strip()
-                        cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
-                        common_refs[ branch_head_name[ 'branch_name' ] ] = branch.repo_id.git(cmd).strip()
-                    if common_refs:
-                        name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
-                        r[branch.id] = name
-                        print "branch.id,branch.repo_id.name,name",branch.id, branch.name, branch.repo_id.name, name
-                        #Encontro 8.0 y master en el pr1 de odoo
-        return r
 
-    def _get_branch_base_id(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
-        #import pdb;pdb.set_trace()
-        for branch in self.browse(cr, uid, ids, context=context):
-            res = branch.repo_id.search([
-                ('repo_id', '=', branch.repo_id.id), 
-                ('branch_name', '=', branch.branch_base_name),
-            ])
-            if res:
-                r[branch.id] = res[0]
-            else:
-                r[branch.id] = False
-        return r
-    """
-
-    def _get_branch_title_info(self, cr, uid, ids, field_name, arg, context=None):
-        res = {}
-        #import pdb;pdb.set_trace()
-        for branch in self.browse(cr, uid, ids, context=context):
-            res[branch.id] = {
-                'branch_name': False,
-                'branch_url': False,
-            }
-            res[branch.id] = branch.name.split('/')[-1]
-            if re.match('^[0-9]+$', branch.branch_name):
-                r[branch.id] = "https://%s/pull/%s" % (branch.repo_id.base, branch.branch_name)
-            else:
-                r[branch.id] = "https://%s/tree/%s" % (branch.repo_id.base, branch.branch_name)
-        return res
-    """
-    def _get_branch_name(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
-        for branch in self.browse(cr, uid, ids, context=context):
-            r[branch.id] = branch.name.split('/')[-1]
-        return r
-
-    def _get_branch_url(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
-        for branch in self.browse(cr, uid, ids, context=context):
-            if re.match('^[0-9]+$', branch.branch_name):
-                r[branch.id] = "https://%s/pull/%s" % (branch.repo_id.base, branch.branch_name)
-            else:
-                r[branch.id] = "https://%s/tree/%s" % (branch.repo_id.base, branch.branch_name)
-        return r
-    """
     def _get_branch_data(self, cr, uid, ids, field_names, arg, context=None):
         res = {}
         for branch in self.browse(cr, uid, ids, context=context):
