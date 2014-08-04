@@ -21,8 +21,11 @@
                         <field name="testing"/>
                         <field name="running"/>
                         <field name="base"/>
+                        <field name="host"/>
                         <field name="owner"/>
-                        <field name="short_name"/>
+                        <field name="repo"/>
+                        <field name="host_driver"/>
+                        <field name="url" widget="url"/>
                         <field name="auto"/>
                         <field name="jobs"/>
                         <field name="nginx"/>
@@ -46,8 +49,11 @@
                 <field name="running"/>
                 <field name="auto"/>
                 <field name="base"/>
+                <field name="host"/>
                 <field name="owner"/>
-                <field name="short_name"/>
+                <field name="host_driver"/>
+                <field name="repo"/>
+                <field name="url" widget="url"/>
             </tree>
         </field>
     </record>
@@ -69,7 +75,7 @@
                         <field name="repo_id"/>
                         <field name="name"/>
                         <field name="branch_name"/>
-                        <field name="branch_url"/>
+                        <field name="branch_url" widget="url"/>
                         <field name="sticky"/>
                         <field name="state"/>
                         <field name="branch_base_name"/>
@@ -85,6 +91,7 @@
             <tree string="Branches">
                 <field name="repo_id"/>
                 <field name="name"/>
+                <field name="branch_url" widget="url"/>
                 <field name="sticky"/>
                 <field name="state"/>
                 <field name="branch_base_name"/>

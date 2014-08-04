@@ -161,31 +161,54 @@ class runbot_repo(osv.osv):
             result[repo.id] = os.path.join(root, 'repo', name)
         return result
 
-    def _get_base(self, cr, uid, ids, field_names, arg, context=None):
+    def _get_url_info(self, cr, uid, ids, field_names, arg, context=None):
         result = {}
         for repo in self.browse(cr, uid, ids, context=context):
             result[repo.id] = {
+                'host': False,
                 'owner': False,
-                'short_name': False,
+                'repo': False,
                 'base': False,
+                'host_driver': False,
+                'host_url': False,
+                'url': repo.name,
             }
+            if os.path.isdir( repo.name ):
+                result[repo.id]['host_driver'] = 'localpath'
+                result[repo.id]['host_url'] = 'file://'
+                result[repo.id]['url'] = '%s%s'%( result[repo.id]['host_url'], repo.name )
             name = re.sub('.+@', '', repo.name)
             name = name.replace(':','/')
             result[repo.id]['base'] = name
-
-            regex = "((git|https)(://|@))([\w\.]+)(/|:)(?P<owner>[\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
+            regex = "(?P<host>(git@|https://)([\w\.@]+)(/|:))(?P<owner>[\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
             match_object = re.search( regex, repo.name )
             if match_object:
+                result[repo.id]['host'] = match_object.group("host")
                 result[repo.id]['owner'] = match_object.group("owner")
-                result[repo.id]['short_name'] = match_object.group("repo")
+                result[repo.id]['repo'] = match_object.group("repo")
+                if 'github.com' in result[repo.id]['host']:
+                    result[repo.id]['host_driver'] = 'github'
+                    result[repo.id]['host_url'] = 'https://github.com'
+                    result[repo.id]['url'] = '/'.join( [ result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                elif 'bitbucket.org' in result[repo.id]['host']:
+                    result[repo.id]['host_driver'] = 'bitbucket'
+                    result[repo.id]['host_url'] = 'https://bitbucket.org'
+                    result[repo.id]['url'] = '/'.join( [ result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                else:
+                    pass
+                    #You can inherit this function for add more host's
         return result
 
     _columns = {
         'name': fields.char('Repository', required=True),
         'path': fields.function(_get_path, type='char', string='Directory', readonly=1),
-        'base': fields.function(_get_base, type='char', string='Base URL', readonly=1, multi='url_info'),
-        'owner': fields.function(_get_base, type='char', string='Owner URL', readonly=1, multi='url_info'),
-        'short_name': fields.function(_get_base, type='char', string='Short name', readonly=1, multi='url_info'),
+        'base': fields.function(_get_url_info, type='char', string='Base URL', readonly=1, multi='url_info'),
+        'host': fields.function(_get_url_info, type='char', string='Host from URL', readonly=1, multi='url_info'),
+        'owner': fields.function(_get_url_info, type='char', string='Owner from URL', readonly=1, multi='url_info'),
+        'repo': fields.function(_get_url_info, type='char', string='Repo from URL', readonly=1, multi='url_info'),
+        'host_driver': fields.function(_get_url_info, type='char', string='Host driver from URL', readonly=1, multi='url_info'),
+        'host_url': fields.function(_get_url_info, type='char', string='URL host', readonly=1, multi='url_info'),
+        'url': fields.function(_get_url_info, type='char', string='URL repo', readonly=1, multi='url_info'),
         #'base_short': fields.function(_get_base_short, type='char', string='Base URL short for pygithub', readonly=1),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
@@ -418,13 +441,22 @@ class runbot_branch(osv.osv):
                 'branch_name': False,
                 'branch_url': False,
             }
-
+            res[branch.id]['branch_name'] = branch.name.split('/')[-1]
             if 'branch_name' in field_names or 'branch_url' in field_names:
-                res[branch.id]['branch_name'] = branch.name.split('/')[-1]
-                if re.match('^[0-9]+$', res[branch.id]['branch_name']):
-                    res[branch.id]['branch_url'] = "https://%s/pull/%s" % (branch.repo_id.base.replace('.git', ''), res[branch.id]['branch_name'])
+                if branch.repo_id.host_driver == 'github':
+                    #import pdb;pdb.set_trace()
+                    if re.match('^[0-9]+$', res[branch.id]['branch_name']):
+                        res[branch.id]['branch_url'] = "%s/pull/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                        #https://github.com/odoo/odoo/pull/1529
+                    else:
+                        res[branch.id]['branch_url'] = "%s/tree/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                elif branch.repo_id.host_driver == 'bitbucket':
+                    if re.match('^[0-9]+$', res[branch.id]['branch_name'] or ''):
+                        res[branch.id]['branch_url'] = False#ToDo: Process PR branch
+                    else:
+                        res[branch.id]['branch_url'] = "%s/src/?at=%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
                 else:
-                    res[branch.id]['branch_url'] = "https://%s/tree/%s" % (branch.repo_id.base.replace('.git', ''), res[branch.id]['branch_name'])
+                    pass#Add inherit function for add more host
 
             if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
                 if branch.name.startswith('refs/pull/'):
@@ -475,8 +507,8 @@ class runbot_branch(osv.osv):
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
-        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=True),
-        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=True),
+        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=False),
+        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=False),
         'sticky': fields.boolean('Sticky', select=1),
         'coverage': fields.boolean('Coverage'),
         'state': fields.char('Status'),
