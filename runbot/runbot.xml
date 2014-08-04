@@ -35,6 +35,7 @@
                         </field>
                         <field name="modules"/>
                         <field name="token"/>
+                        <field name="active"/>
                     </group>
                 </sheet>
             </form>
@@ -80,7 +81,6 @@
                         <field name="state"/>
                         <field name="branch_base_name"/>
                         <field name="branch_base_id"/>
-                        <field name="active"/>
                     </group>
                 </sheet>
             </form>
