@@ -31,12 +31,6 @@ from openerp.osv import fields, osv
 from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 
-try:
-    from github import Github
-except:
-    Github = False
-    pass#Add warning to install this library
-
 _logger = logging.getLogger(__name__)
 
 #----------------------------------------------------------
@@ -209,7 +203,6 @@ class runbot_repo(osv.osv):
         'host_driver': fields.function(_get_url_info, type='char', string='Host driver from URL', readonly=1, multi='url_info'),
         'host_url': fields.function(_get_url_info, type='char', string='URL host', readonly=1, multi='url_info'),
         'url': fields.function(_get_url_info, type='char', string='URL repo', readonly=1, multi='url_info'),
-        #'base_short': fields.function(_get_base_short, type='char', string='Base URL short for pygithub', readonly=1),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
         'jobs': fields.char('Jobs'),
@@ -225,7 +218,7 @@ class runbot_repo(osv.osv):
         'token': fields.char("Github token"),
         'active': fields.boolean('Active'),
     }
-    
+
     _defaults = {
         'testing': 1,
         'running': 1,
@@ -247,7 +240,6 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             cmd = ['git', '--git-dir=%s' % repo.path] + cmd
             _logger.info("git: %s", ' '.join(cmd))
-            print "git: %s"%( ' '.join(cmd) )#Remove this line
             return subprocess.check_output(cmd)
 
     def git_export(self, cr, uid, ids, treeish, dest, context=None):
@@ -257,19 +249,17 @@ class runbot_repo(osv.osv):
             p2 = subprocess.Popen(['tar', '-xC', dest], stdin=p1.stdout, stdout=subprocess.PIPE)
             p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
             p2.communicate()[0]
-    
-    
+
     def github(self, cr, uid, ids, url, payload=None, delete=False, context=None):
         """Return a http request to be sent to github"""
         for repo in self.browse(cr, uid, ids, context=context):
             if not repo.token:
                 raise Exception('Repository does not have a token to authenticate')
-            match_object = re.search ('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
+            match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
             if match_object:
                 url = url.replace(':owner', match_object.group(2))
-                url = url.replace(':repo', match_object.group(3).replace('.git', ''))#TODO: Modify regex for remove .git
+                url = url.replace(':repo', match_object.group(3))
                 url = 'https://api.%s%s' % (match_object.group(1),url)
-                print "url",url #Delete this line
                 session = requests.Session()
                 session.auth = (repo.token,'x-oauth-basic')
                 session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
@@ -299,16 +289,15 @@ class runbot_repo(osv.osv):
             repo.git(['fetch', '-p', 'origin', '+refs/heads/*:refs/heads/*'])
             repo.git(['fetch', '-p', 'origin', '+refs/pull/*/head:refs/pull/*'])
 
-        fields = ['refname','objectname','committerdate:iso8601','authorname','subject', ]
+        fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
         fmt = "%00".join(["%("+field+")" for field in fields])
         git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', 'refs/heads', 'refs/pull'])
         git_refs = git_refs.strip()
 
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-        
+
         for name, sha, date, author, subject in refs:
             # create or get branch
-#            if 'pull' in name and Github:
             branch_ids = Branch.search(cr, uid, [('repo_id', '=', repo.id), ('name', '=', name)])
             if branch_ids:
                 branch_id = branch_ids[0]
@@ -334,10 +323,6 @@ class runbot_repo(osv.osv):
                     'subject': subject,
                     'date': dateutil.parser.parse(date[:19]),
                     'modules': branch.repo_id.modules,
-                    #'branch_head_id': 
-                    #'dependency_branch_id':
-                    #'dependency_sha':
-#                    #'branch_parent_id': False,#TODO: Get parent branch from PR
                 }
                 Build.create(cr, uid, build_info)
 
@@ -444,10 +429,8 @@ class runbot_branch(osv.osv):
             res[branch.id]['branch_name'] = branch.name.split('/')[-1]
             if 'branch_name' in field_names or 'branch_url' in field_names:
                 if branch.repo_id.host_driver == 'github':
-                    #import pdb;pdb.set_trace()
                     if re.match('^[0-9]+$', res[branch.id]['branch_name']):
                         res[branch.id]['branch_url'] = "%s/pull/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
-                        #https://github.com/odoo/odoo/pull/1529
                     else:
                         res[branch.id]['branch_url'] = "%s/tree/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
                 elif branch.repo_id.host_driver == 'bitbucket':
@@ -460,7 +443,7 @@ class runbot_branch(osv.osv):
 
             if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
                 if branch.name.startswith('refs/pull/'):
-                    if branch.repo_id.token:
+                    if branch.repo_id.host_driver == 'github' and branch.repo_id.token:
                         #using github for get branch_base from pr branch
                         pull_number = branch.name[len('refs/pull/'):]
                         pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s' % pull_number)
@@ -471,7 +454,6 @@ class runbot_branch(osv.osv):
                             res[branch.id]['branch_base_name'] = pr['base']['ref']
                     else:
                         #using local branch for get branch_base from pr branch
-                        #import pdb;pdb.set_trace()
                         branch_head_ids = self.search(cr, uid, [
                             ('repo_id.id', '=', branch.repo_id.id),
                             ('name', 'like', 'refs/heads/%'),
@@ -507,8 +489,8 @@ class runbot_branch(osv.osv):
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
-        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=False),
-        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=False),
+        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=True),
+        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=True),
         'sticky': fields.boolean('Sticky', select=1),
         'coverage': fields.boolean('Coverage'),
         'state': fields.char('Status'),
@@ -728,7 +710,6 @@ class runbot_build(osv.osv):
                     )
                 build.write({'modules': modules_to_test})
                 hint_branches = set()
-                #import pdb;pdb.set_trace()
                 for extra_repo in build.repo_id.dependency_ids:
                     closest_name = build.get_closest_branch_name(extra_repo.id, hint_branches)
                     hint_branches.add(closest_name)

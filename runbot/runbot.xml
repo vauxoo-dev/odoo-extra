@@ -80,6 +80,7 @@
                         <field name="state"/>
                         <field name="branch_base_name"/>
                         <field name="branch_base_id"/>
+                        <field name="active"/>
                     </group>
                 </sheet>
             </form>
@@ -105,6 +106,7 @@
             <search string="Search builds">
                 <field name="name"/>
                 <field name="state"/>
+                <field name="repo_id"/>
                 <filter string="Sticky" domain="[('sticky','=', True)]"/>
                 <separator />
                 <group expand="0" string="Group By...">
