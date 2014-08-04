@@ -169,8 +169,8 @@ class runbot_repo(osv.osv):
             }
             if os.path.isdir( repo.name ):
                 result[repo.id]['host_driver'] = 'localpath'
-                result[repo.id]['host_url'] = 'file://'
-                result[repo.id]['url'] = '%s%s'%( result[repo.id]['host_url'], repo.name )
+                result[repo.id]['host_url'] = 'localhost'
+                result[repo.id]['url'] = '%s%s'%( 'file://', repo.name )
             name = re.sub('.+@', '', repo.name)
             name = name.replace(':','/')
             result[repo.id]['base'] = name
@@ -182,12 +182,12 @@ class runbot_repo(osv.osv):
                 result[repo.id]['repo'] = match_object.group("repo")
                 if 'github.com' in result[repo.id]['host']:
                     result[repo.id]['host_driver'] = 'github'
-                    result[repo.id]['host_url'] = 'https://github.com'
-                    result[repo.id]['url'] = '/'.join( [ result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                    result[repo.id]['host_url'] = 'github.com'
+                    result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
                 elif 'bitbucket.org' in result[repo.id]['host']:
                     result[repo.id]['host_driver'] = 'bitbucket'
-                    result[repo.id]['host_url'] = 'https://bitbucket.org'
-                    result[repo.id]['url'] = '/'.join( [ result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                    result[repo.id]['host_url'] = 'bitbucket.org'
+                    result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
                 else:
                     pass
                     #You can inherit this function for add more host's
@@ -253,23 +253,23 @@ class runbot_repo(osv.osv):
     def github(self, cr, uid, ids, url, payload=None, delete=False, context=None):
         """Return a http request to be sent to github"""
         for repo in self.browse(cr, uid, ids, context=context):
+            if repo.host_driver != 'github':
+                raise Exception('Repository does not have a driver to use github')
             if not repo.token:
                 raise Exception('Repository does not have a token to authenticate')
-            match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
-            if match_object:
-                url = url.replace(':owner', match_object.group(2))
-                url = url.replace(':repo', match_object.group(3))
-                url = 'https://api.%s%s' % (match_object.group(1),url)
-                session = requests.Session()
-                session.auth = (repo.token,'x-oauth-basic')
-                session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
-                if payload:
-                    response = session.post(url, data=simplejson.dumps(payload))
-                elif delete:
-                    response = session.delete(url)
-                else:
-                    response = session.get(url)
-                return response.json()
+            url = url.replace(':owner', repo.owner)
+            url = url.replace(':repo', repo.repo)
+            url = 'https://api.%s%s' % (repo.host_url, url)
+            session = requests.Session()
+            session.auth = (repo.token,'x-oauth-basic')
+            session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
+            if payload:
+                response = session.post(url, data=simplejson.dumps(payload))
+            elif delete:
+                response = session.delete(url)
+            else:
+                response = session.get(url)
+            return response.json()
 
     def update(self, cr, uid, ids, context=None):
         for repo in self.browse(cr, uid, ids, context=context):
@@ -303,7 +303,11 @@ class runbot_repo(osv.osv):
                 branch_id = branch_ids[0]
             else:
                 _logger.debug('repo %s found new branch %s', repo.name, name)
-                branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
+                try:
+                    branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
+                except:
+                    #Note: Sometimes make duplicate branch why? because use different cursor or why?
+                    continue
             branch = Branch.browse(cr, uid, [branch_id], context=context)[0]
             # skip build for old branches
             if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
@@ -498,12 +502,14 @@ class runbot_branch(osv.osv):
             string='Branch base name', readonly=1, multi='branch_data',
             store={
                 'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+                'runbot.branch': (lambda self, cr, uid, ids, context: ids, ['name'], 10 )
             },
         ),
         'branch_base_id': fields.function(_get_branch_data, type='many2one', readonly=1,
             string='Branch base', relation='runbot.branch', multi='branch_data',
             store={
                 'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+                'runbot.branch': (lambda self, cr, uid, ids, context: ids, ['name'], 10 )
             },
         ),
     }
