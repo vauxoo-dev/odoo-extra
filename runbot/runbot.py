@@ -1146,7 +1146,6 @@ class RunbotController(http.Controller):
                     GROUP BY br_bu.branch_id, br_bu.branch_dependency_id;
                 """
                 cr.execute(build_query, (tuple(branch_ids),))
-                import pdb;pdb.set_trace()
                 build_by_branch_ids = {
                     (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
@@ -1155,38 +1154,19 @@ class RunbotController(http.Controller):
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
 
-            def branch_info(branch, branch_dependency=False):
+            def branch_info(branch, branch_dependency):
                 return {
                     'branch': branch,
-                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id, branch_dependency and branch_dependency.id or False]]
+                    'branch_dependency': branch_dependency,
+                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id, branch_dependency and branch_dependency.id or None]]
                 }
 
-            def get_branches(branches):
-                l_branches = []
-                place = 0
-                for branch in branches:
-                    l_builds_d = []
-                    l_builds = []
-                    for builds in build_by_branch_ids[branch.id]:
-                        build = build_dict[builds]
-                        if build.branch_dependency_id:
-                            l_builds_d.append(self.build_info(build_dict[builds]))
-                        else:
-                            l_builds.append(self.build_info(build_dict[builds]))
-                    if l_builds_d:
-                        l_branches.insert(len(l_branches), {'branch':branch, 'builds': l_builds_d})
-                    if l_builds:
-                        l_branches.insert(place, {'branch':branch, 'builds': l_builds})
-                    place += 1
-                return l_branches
-
-
-
-
-
-
             context.update({
-                'branches': get_branches(branches),
+                'branches': [ branch_info( 
+                                branch_obj.browse(cr, uid, [branch_id], context=request.context)[0],\
+                                branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0]\
+                         ) \
+                         for branch_id, branch_dependency_id in build_by_branch_ids.keys() ],
                 'testing': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','testing')]),
                 'running': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','running')]),
                 'pending': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','pending')]),
