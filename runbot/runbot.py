@@ -1123,7 +1123,7 @@ class RunbotController(http.Controller):
                     INNER JOIN runbot_build bu 
                        ON br.id=bu.branch_id 
                     WHERE bu.id in %s
-                    ORDER BY real_sticky DESC, bu.branch_dependency_id DESC, bu.sequence DESC
+                    ORDER BY real_sticky DESC, bu.sequence DESC--, br.id DESC, bu.branch_dependency_id DESC
                 """
                 #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
                 #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
@@ -1143,17 +1143,15 @@ class RunbotController(http.Controller):
                             br.id AS branch_id,
                             bu.id AS build_id,
                             bu.branch_dependency_id AS branch_dependency_id,
-                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id) AS row
+                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
-                        WHERE
-                            bu.id in %s
-                        GROUP BY br.id, bu.id
-                        ORDER BY br.id, bu.branch_dependency_id DESC, bu.id DESC
+                        WHERE bu.id in %s
+                        GROUP BY br.id, branch_dependency_id, bu.id
                     ) AS br_bu
                     WHERE
                         row <= 4
-                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id;
+                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id
                 """
                 cr.execute(build_query, (tuple(build_ids),))
                 build_by_branch_ids = {
