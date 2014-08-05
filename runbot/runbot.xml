@@ -376,7 +376,7 @@
                         <tr>
                             <th>Branch</th>
                             <td colspan="4" class="text-right">
-                                <t t-esc="repo.base"/>: 
+                                <t t-esc="repo.base"/>:
                                 <t t-esc="testing"/> testing,
                                 <t t-esc="running"/> running,
                                 <t t-esc="pending"/> pending.
@@ -385,8 +385,15 @@
                         </tr>
                         <tr t-foreach="branches" t-as="br">
                             <td>
-                                <i t-if="br['branch'].sticky" class="fa fa-star"/>
+                                <i t-if="br['branch'].sticky and not br['branch_dependency'].branch_url" class="fa fa-star"/>
                                 <b t-esc="br['branch'].branch_name"/>
+
+                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].branch_url"/>
+<!--                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].repo_id.owner"/>
+                                <span t-if="br['branch_dependency']">/</span>
+                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].repo_id.repo"/>
+                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].branch_name"/>
+-->
                                 <small><t t-esc="br['builds'][0]['job_age']"/></small><br/>
                                 <div class="btn-group btn-group-xs">
                                     <a t-attf-href="{{br['branch'].branch_url}}" class="btn btn-default btn-xs">Branch or pull <i class="fa fa-github"/></a>
