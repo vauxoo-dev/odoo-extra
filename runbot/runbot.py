@@ -947,6 +947,8 @@ class runbot_build(osv.osv):
                     'name': build.name,
                     'author': build.author,
                     'subject': build.subject,
+                    'branch_dependency_id': build.branch_dependency_id and \
+                        build.branch_dependency_id.id or False,
                 }
                 self.create(cr, 1, new_build, context=context)
             return build.repo_id.id
