@@ -498,7 +498,7 @@ class runbot_branch(osv.osv):
 
                     if res[branch.id]['branch_base_name']:
                         branch_base_ids = branch.search([
-                                ('repo_id', '=', branch.repo_id.id), 
+                                ('repo_id', '=', branch.repo_id.id),
                                 ('name', '=', 'refs/heads/%s'%( res[branch.id]['branch_base_name'] ) ),
                             ])
                         if branch_base_ids:
@@ -511,7 +511,7 @@ class runbot_branch(osv.osv):
         branch_pool = self.pool.get('runbot.branch')#We need pool.get because is other self source
         branch_ids = branch_pool.search(cr, uid, [('repo_id', 'in', repo_ids)], context=context)
         return branch_ids
-    
+
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
@@ -520,7 +520,7 @@ class runbot_branch(osv.osv):
         'sticky': fields.boolean('Sticky', select=1),
         'coverage': fields.boolean('Coverage'),
         'state': fields.char('Status'),
-        'branch_base_name': fields.function( _get_branch_data, type='char', 
+        'branch_base_name': fields.function( _get_branch_data, type='char',
             string='Branch base name', readonly=1, multi='branch_data',
             store={
                 'runbot.repo': (_get_branch_from_repo, ['token'], 10),
@@ -535,7 +535,7 @@ class runbot_branch(osv.osv):
             },
         ),
     }
-    
+
     _sql_constraints = [
         ('branch_name_repo_unique', 'unique (name,repo_id)', 'The name of the branch must be unique per repo !')
     ]
@@ -618,9 +618,9 @@ class runbot_build(osv.osv):
 
         # detect duplicate
         domain = [
-            ('repo_id','=',build.repo_id.duplicate_id.id), 
-            ('name', '=', build.name), 
-            ('duplicate_id', '=', False), 
+            ('repo_id','=',build.repo_id.duplicate_id.id),
+            ('name', '=', build.name),
+            ('duplicate_id', '=', False),
             '|', ('result', '=', False), ('result', '!=', 'skipped')
         ]
         duplicate_ids = self.search(cr, uid, domain, context=context)
@@ -785,7 +785,7 @@ class runbot_build(osv.osv):
             if grep(build.server("tools/config.py"), "no-netrpc"):
                 cmd.append("--no-netrpc")
             if grep(build.server("tools/config.py"), "log-db"):
-                cmd += ["--log-db=%s" % cr.dbname] 
+                cmd += ["--log-db=%s" % cr.dbname]
 
         # coverage
         #coverage_file_path=os.path.join(log_path,'coverage.pickle')
@@ -1085,7 +1085,7 @@ class RunbotController(http.Controller):
         repo_ids = repo_obj.search(cr, uid, [], order='id')
         repos = repo_obj.browse(cr, uid, repo_ids)
         if not repo and repos:
-            repo = repos[0] 
+            repo = repos[0]
 
         context = {
             'repos': repos,
@@ -1121,20 +1121,20 @@ class RunbotController(http.Controller):
                 branch_ids = uniq_list(sticky_branch_ids + [br[0] for br in cr.fetchall()])
 
                 build_query = """
-                    SELECT 
-                        branch_id, 
+                    SELECT
+                        branch_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
                         max(case when br_bu.row = 2 then br_bu.build_id end),
                         max(case when br_bu.row = 3 then br_bu.build_id end),
                         max(case when br_bu.row = 4 then br_bu.build_id end)
                     FROM (
-                        SELECT 
-                            br.id AS branch_id, 
+                        SELECT
+                            br.id AS branch_id,
                             bu.id AS build_id,
                             row_number() OVER (PARTITION BY branch_id) AS row
-                        FROM 
-                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id 
-                        WHERE 
+                        FROM
+                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
+                        WHERE
                             br.id in %s
                         GROUP BY br.id, bu.id
                         ORDER BY br.id, bu.id DESC
@@ -1158,8 +1158,32 @@ class RunbotController(http.Controller):
                     'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id]]
                 }
 
+            def get_branches(branches):
+                l_branches = []
+                place = 0
+                for branch in branches:
+                    l_builds_d = []
+                    l_builds = []
+                    for builds in build_by_branch_ids[branch.id]:
+                        build = build_dict[builds]
+                        if build.branch_dependency_id:
+                            l_builds_d.append(self.build_info(build_dict[builds]))
+                        else:
+                            l_builds.append(self.build_info(build_dict[builds]))
+                    if l_builds_d:
+                        l_branches.insert(len(l_branches), {'branch':branch, 'builds': l_builds_d})
+                    if l_builds:
+                        l_branches.insert(place, {'branch':branch, 'builds': l_builds})
+                    place += 1
+                return l_branches
+
+
+
+
+
+
             context.update({
-                'branches': [branch_info(b) for b in branches],
+                'branches': get_branches(branches),
                 'testing': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','testing')]),
                 'running': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','running')]),
                 'pending': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','pending')]),
@@ -1178,6 +1202,7 @@ class RunbotController(http.Controller):
             'result': real_build.result,
             'subject': build.subject,
             'author': build.author,
+            'dependency':build.branch_dependency_id.name,
             'dest': build.dest,
             'real_dest': real_build.dest,
             'job_age': s2human(real_build.job_age),
