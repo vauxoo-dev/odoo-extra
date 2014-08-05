@@ -376,7 +376,7 @@
                         <tr>
                             <th>Branch</th>
                             <td colspan="4" class="text-right">
-                                <t t-esc="repo.base"/>: 
+                                <t t-esc="repo.base"/>:
                                 <t t-esc="testing"/> testing,
                                 <t t-esc="running"/> running,
                                 <t t-esc="pending"/> pending.
@@ -400,6 +400,9 @@
                                 <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'ok'"><t t-set="klass">success</t></t>
                                 <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'skipped'"><t t-set="klass">default</t></t>
                                 <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'killed'"><t t-set="klass">killed</t></t>
+                                <td>
+                                    <span t-esc="bu['dependency']"/>
+                                </td>
                                 <td t-attf-class="{{klass}}">
                                    <t t-call="runbot.build_button"><t t-set="klass">btn-group-sm</t></t>
                                    <t t-if="bu['subject']">
