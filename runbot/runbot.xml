@@ -151,6 +151,7 @@
                         <field name="job_time"/>
                         <field name="job_age"/>
                         <field name="duplicate_id"/>
+                        <field name="branch_dependency_id"/>
                     </group>
                 </sheet>
             </form>
@@ -173,6 +174,8 @@
                 <field name="job_start"/>
                 <field name="job_time"/>
                 <field name="job_age"/>
+                <field name="name"/>
+                <field name="branch_dependency_id"/>
             </tree>
         </field>
     </record>

@@ -314,21 +314,38 @@ class runbot_repo(osv.osv):
                 continue
             # create build (and mark previous builds as skipped) if not found
             build_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('name', '=', sha)])
-            if not build_ids:
-                if not branch.sticky:
-                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending')])
-                    Build.skip(cr, uid, to_be_skipped_ids)
-
-                _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
-                build_info = {
+            build_info = {
                     'branch_id': branch.id,
                     'name': sha,
                     'author': author,
                     'subject': subject,
                     'date': dateutil.parser.parse(date[:19]),
                     'modules': branch.repo_id.modules,
-                }
+            }
+            if not build_ids:
+                if not branch.sticky:
+                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('branch_dependency_id', '=', False)])
+                    Build.skip(cr, uid, to_be_skipped_ids)
+
+                _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
                 Build.create(cr, uid, build_info)
+
+            #Get PR build of repository depends
+            repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids]
+            branch_depends_ids = Branch.search(cr, uid, [('branch_name', '=', branch.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
+            branch_depends_pr_ids = Branch.search(cr, uid, [('branch_base_id', 'in', branch_depends_ids)], context=context)
+            for branch_depends_pr in Branch.browse(cr, uid, branch_depends_pr_ids, context=context):
+                build_depends_pr_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('branch_dependency_id', '=', branch_depends_pr.id)], context=context)
+                if not build_depends_pr_ids:
+                    sha = branch_depends_pr.repo_id.owner + "/" + branch_depends_pr.repo_id.repo + "-" + branch_depends_pr.name
+                    build_info.update({
+                        'branch_dependency_id': branch_depends_pr.id,
+                        'name': sha,
+                        'subject': sha,
+                        'branch_id': branch.id,
+                    })
+                    _logger.debug('repo %s branch %s new build found PR %s into dependency branch %s', branch.repo_id.name, branch.name, sha, branch_depends_pr.name)
+                    Build.create(cr, uid, build_info)
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
@@ -447,6 +464,7 @@ class runbot_branch(osv.osv):
 
             if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
                 if branch.name.startswith('refs/pull/'):
+                    merged = False
                     if branch.repo_id.host_driver == 'github' and branch.repo_id.token:
                         #using github for get branch_base from pr branch
                         pull_number = branch.name[len('refs/pull/'):]
@@ -454,6 +472,8 @@ class runbot_branch(osv.osv):
                         if 'Not Found' == pr.get('message'):
                             #Search into PR merged
                             pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s/merge' % pull_number)
+                            if pr.has_key('base'):
+                                merged = True
                         if pr.has_key('base'):
                             res[branch.id]['branch_base_name'] = pr['base']['ref']
                     else:
@@ -483,6 +503,8 @@ class runbot_branch(osv.osv):
                             ])
                         if branch_base_ids:
                             res[branch.id]['branch_base_id'] = branch_base_ids[0].id
+                            if merged:
+                                self.write(cr, uid, branch.id, {'state': 'merged'})#Check stability of write into fields.function
         return res
 
     def _get_branch_from_repo(self, cr, uid, repo_ids, context=None):
@@ -526,7 +548,8 @@ class runbot_build(osv.osv):
         r = {}
         for build in self.browse(cr, uid, ids, context=context):
             nickname = dashes(build.branch_id.name.split('/')[2])[:32]
-            r[build.id] = "%05d-%s-%s" % (build.id, nickname, build.name[:6])
+            dest = "%05d-%s-%s" % (build.id, nickname, build.name[:6])
+            r[build.id] = dashes(dest)
         return r
 
     def _get_time(self, cr, uid, ids, field_name, arg, context=None):
@@ -580,6 +603,7 @@ class runbot_build(osv.osv):
         'job_time': fields.function(_get_time, type='integer', string='Job time'),
         'job_age': fields.function(_get_age, type='integer', string='Job age'),
         'duplicate_id': fields.many2one('runbot.build', 'Corresponding Build'),
+        'branch_dependency_id': fields.many2one('runbot.branch', 'Branch depends', required=False, ondelete='cascade', select=1),
     }
 
     _defaults = {
@@ -635,45 +659,6 @@ class runbot_build(osv.osv):
 
         return port
 
-    def get_closest_branch_name(self, cr, uid, ids, target_repo_id, hint_branches, context=None):
-        """Return the name of the closest common branch between both repos
-        Find common branch names, get merge-base with the branch name and
-        return the most recent.
-        Fallback repos will not have always have the same names for branch
-        names.
-        Pull request branches should not have any association with PR of other
-        repos
-        """
-        branch_pool = self.pool['runbot.branch']
-        for build in self.browse(cr, uid, ids, context=context):
-            branch, repo = build.branch_id, build.repo_id
-            name = branch.branch_name
-            # Use github API to find name of branch on which the PR is made
-            if repo.token and name.startswith('refs/pull/'):
-                pull_number = name[len('refs/pull/'):]
-                pr = repo.github('/repos/:owner/:repo/pulls/%s' % pull_number)
-                name = 'refs/heads/' + pr['base']['ref']
-            # Find common branch names between repo and target repo
-            branch_ids = branch_pool.search(cr, uid, [('repo_id.id', '=', repo.id)])
-            target_ids = branch_pool.search(cr, uid, [('repo_id.id', '=', target_repo_id)])
-            branch_names = branch_pool.read(cr, uid, branch_ids, ['branch_name', 'name'], context=context)
-            target_names = branch_pool.read(cr, uid, target_ids, ['branch_name', 'name'], context=context)
-            possible_repo_branches = set([i['branch_name'] for i in branch_names if i['name'].startswith('refs/heads')])
-            possible_target_branches = set([i['branch_name'] for i in target_names if i['name'].startswith('refs/heads')])
-            possible_branches = possible_repo_branches.intersection(possible_target_branches)
-            if name not in possible_branches:
-                hinted_branches = possible_branches.intersection(hint_branches)
-                if hinted_branches:
-                    possible_branches = hinted_branches
-                common_refs = {}
-                for target_branch_name in possible_branches:
-                    commit = repo.git(['merge-base', branch.name, target_branch_name]).strip()
-                    cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
-                    common_refs[target_branch_name] = repo.git(cmd).strip()
-                if common_refs:
-                    name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
-            return name
-
     def path(self, cr, uid, ids, *l, **kw):
         for build in self.browse(cr, uid, ids, context=None):
             root = self.pool['runbot.repo'].root(cr, uid)
@@ -686,6 +671,7 @@ class runbot_build(osv.osv):
             return build.path('openerp', *l)
 
     def checkout(self, cr, uid, ids, context=None):
+        branch_pool = self.pool.get('runbot.branch')
         for build in self.browse(cr, uid, ids, context=context):
             # starts from scratch
             if os.path.isdir(build.path()):
@@ -695,7 +681,9 @@ class runbot_build(osv.osv):
             mkdirs([build.path("logs"), build.server('addons')])
 
             # checkout branch
-            build.branch_id.repo_id.git_export(build.name, build.path())
+            principal_branch_version = 'pull' in build.name and build.branch_id.branch_name or build.name
+            #export with last version when is a pull request build
+            build.branch_id.repo_id.git_export(principal_branch_version, build.path())
 
             # TODO use git log to get commit message date and author
 
@@ -716,10 +704,24 @@ class runbot_build(osv.osv):
                     )
                 build.write({'modules': modules_to_test})
                 hint_branches = set()
-                for extra_repo in build.repo_id.dependency_ids:
-                    closest_name = build.get_closest_branch_name(extra_repo.id, hint_branches)
-                    hint_branches.add(closest_name)
-                    extra_repo.git_export(closest_name, build.path())
+
+                #Find branch from repository dependencies with same name of principal branch (odoo version)
+                repo_depend_ids = [repo_depend.id for repo_depend in build.repo_id.dependency_ids]
+                branch_depends_ids = branch_pool.search(cr, uid, [('branch_name', '=', build.branch_id.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
+
+                pr_original_branch_id = build.branch_dependency_id and build.branch_dependency_id.branch_base_id and build.branch_dependency_id.branch_base_id.id or False
+                try:
+                    pr_original_branch_index = branch_depends_ids.index( pr_original_branch_id )
+                except ValueError:
+                    pr_original_branch_index = False
+                if pr_original_branch_index is not False:
+                    #Replace original branch with PR
+                    branch_depends_ids[ pr_original_branch_index ] = build.branch_dependency_id.id
+
+                #Make environment
+                for branch_depend in branch_pool.browse(cr, uid, branch_depends_ids, context=context):
+                    branch_depend.repo_id.git_export(branch_depend.name, build.path())
+
                 # Finally mark all addons to move to openerp/addons
                 additional_modules += [
                     os.path.dirname(module)
