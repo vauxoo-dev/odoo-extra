@@ -1121,8 +1121,9 @@ class RunbotController(http.Controller):
                 branch_ids = uniq_list(sticky_branch_ids + [br[0] for br in cr.fetchall()])
 
                 build_query = """
-                    SELECT
+                        SELECT
                         branch_id,
+                        branch_dependency_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
                         max(case when br_bu.row = 2 then br_bu.build_id end),
                         max(case when br_bu.row = 3 then br_bu.build_id end),
@@ -1131,31 +1132,33 @@ class RunbotController(http.Controller):
                         SELECT
                             br.id AS branch_id,
                             bu.id AS build_id,
-                            row_number() OVER (PARTITION BY branch_id) AS row
+                            bu.branch_dependency_id AS branch_dependency_id,
+                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id) AS row
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
                         WHERE
                             br.id in %s
                         GROUP BY br.id, bu.id
-                        ORDER BY br.id, bu.id DESC
+                        ORDER BY br.id, bu.branch_dependency_id DESC, bu.id DESC
                     ) AS br_bu
                     WHERE
                         row <= 4
-                    GROUP BY br_bu.branch_id;
+                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id;
                 """
                 cr.execute(build_query, (tuple(branch_ids),))
+                import pdb;pdb.set_trace()
                 build_by_branch_ids = {
-                    rec[0]: [r for r in rec[1:] if r is not None] for rec in cr.fetchall()
+                    (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
 
             branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
 
-            def branch_info(branch):
+            def branch_info(branch, branch_dependency=False):
                 return {
                     'branch': branch,
-                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id]]
+                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id, branch_dependency and branch_dependency.id or False]]
                 }
 
             def get_branches(branches):
