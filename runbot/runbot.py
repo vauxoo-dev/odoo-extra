@@ -1112,16 +1112,24 @@ class RunbotController(http.Controller):
 
             if build_ids:
                 branch_query = """
-                SELECT br.id FROM runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id WHERE bu.id in %s
-                ORDER BY bu.sequence DESC
+                    SELECT br.id AS branch_id, 
+                        bu.branch_dependency_id,
+                        CASE WHEN br.sticky AND bu.branch_dependency_id IS NULL THEN True
+                             ELSE False
+                        END AS real_sticky
+                    FROM runbot_branch br 
+                    INNER JOIN runbot_build bu 
+                       ON br.id=bu.branch_id 
+                    WHERE bu.id in %s
+                    ORDER BY real_sticky DESC, bu.branch_dependency_id DESC, bu.sequence DESC
                 """
-                sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
-                sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
+                #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
+                #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
                 cr.execute(branch_query, (tuple(build_ids),))
-                branch_ids = uniq_list(sticky_branch_ids + [br[0] for br in cr.fetchall()])
+                branch_ids = uniq_list( [(br[0], br[1] or None) for br in cr.fetchall()] )
 
                 build_query = """
-                        SELECT
+                    SELECT
                         branch_id,
                         branch_dependency_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
@@ -1137,7 +1145,7 @@ class RunbotController(http.Controller):
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
                         WHERE
-                            br.id in %s
+                            bu.id in %s
                         GROUP BY br.id, bu.id
                         ORDER BY br.id, bu.branch_dependency_id DESC, bu.id DESC
                     ) AS br_bu
@@ -1145,12 +1153,12 @@ class RunbotController(http.Controller):
                         row <= 4
                     GROUP BY br_bu.branch_id, br_bu.branch_dependency_id;
                 """
-                cr.execute(build_query, (tuple(branch_ids),))
+                cr.execute(build_query, (tuple(build_ids),))
                 build_by_branch_ids = {
                     (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
-
-            branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
+            
+            #branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
 
@@ -1166,7 +1174,7 @@ class RunbotController(http.Controller):
                                 branch_obj.browse(cr, uid, [branch_id], context=request.context)[0],\
                                 branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0]\
                          ) \
-                         for branch_id, branch_dependency_id in build_by_branch_ids.keys() ],
+                         for branch_id, branch_dependency_id in branch_ids ],
                 'testing': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','testing')]),
                 'running': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','running')]),
                 'pending': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','pending')]),
