@@ -849,7 +849,7 @@ class runbot_build(osv.osv):
                     'name': build.name,
                     'author': build.author,
                     'subject': build.subject,
-                    'prebuild_id': build.prebuild_id.id
+                    'prebuild_id': build.prebuild_id and build.prebuild_id.id or False
                 }
                 self.create(cr, 1, new_build, context=context)
             return build.repo_id.id
