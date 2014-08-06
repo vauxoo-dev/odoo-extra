@@ -275,12 +275,18 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             self.update_git(cr, uid, repo)
 
-    def update_git(self, cr, uid, repo, context=None):
+    def update_git(self, cr, uid, repo, prebuild=None, context=None):
+        if context is None:
+            context = {}
         _logger.debug('repo %s updating branches', repo.name)
 
         Build = self.pool['runbot.build']
         Branch = self.pool['runbot.branch']
-
+        create_builds = context.get('create_builds', True)
+        build_new_ids = []
+        
+        prebuild_id = prebuild and prebuild.id or False
+        
         if not os.path.isdir(os.path.join(repo.path)):
             os.makedirs(repo.path)
         if not os.path.isdir(os.path.join(repo.path, 'refs')):
@@ -295,7 +301,7 @@ class runbot_repo(osv.osv):
         git_refs = git_refs.strip()
 
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-
+        
         for name, sha, date, author, subject in refs:
             # create or get branch
             branch_ids = Branch.search(cr, uid, [('repo_id', '=', repo.id), ('name', '=', name)])
@@ -324,11 +330,19 @@ class runbot_repo(osv.osv):
             }
             if not build_ids:
                 if not branch.sticky:
-                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('branch_dependency_id', '=', False)])
+                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('branch_dependency_id', '=', False), ('prebuild_id', '=', prebuild_id)])
                     Build.skip(cr, uid, to_be_skipped_ids)
 
                 _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
                 Build.create(cr, uid, build_info)
+                
+                if create_builds:#If create_builds==True then make repo as origin process. But if create_builds==False, make repo from pre-build
+                    _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
+                    build_info.update({
+                        'name': prebuild and prebuild.name or sha,
+                        'prebuild_id': prebuild_id,
+                    })
+                    build_new_ids.append( Build.create(cr, uid, build_info) )
 
             #Get PR build of repository depends
             repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids]
@@ -353,14 +367,25 @@ class runbot_repo(osv.osv):
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
         to_be_skipped_ids = Build.search(cr, uid, skippable_domain, order='sequence desc', offset=running_max)
         Build.skip(cr, uid, to_be_skipped_ids)
+        return build_new_ids
 
     def scheduler(self, cr, uid, ids=None, context=None):
+        if context is None:
+            context = {}
+        build_ids = context.get('build_ids', []) or []
         icp = self.pool['ir.config_parameter']
         workers = int(icp.get_param(cr, uid, 'runbot.workers', default=6))
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
 
         Build = self.pool['runbot.build']
-        domain = [('repo_id', 'in', ids)]
+
+        domain = []
+        if build_ids:
+            domain.append( ('id', 'in', build_ids) )
+        if ids:
+            domain.append( ('repo_id', 'in', ids) )
+        if len(domain) == 2:
+            domain.insert(0, '|')
 
         # schedule jobs (transitions testing -> running, kill jobs, ...)
         build_ids = Build.search(cr, uid, domain + [('state', 'in', ['testing', 'running'])])
@@ -631,6 +656,7 @@ class runbot_build(osv.osv):
             if self.browse(cr, uid, duplicate_ids[0]).state != 'pending':
                 self.github_status(cr, uid, [build_id])
         self.write(cr, uid, [build_id], extra_info, context=context)
+        return build_id
 
     def reset(self, cr, uid, ids, context=None):
         self.write(cr, uid, ids, { 'state' : 'pending' }, context=context)
@@ -949,6 +975,7 @@ class runbot_build(osv.osv):
                     'subject': build.subject,
                     'branch_dependency_id': build.branch_dependency_id and \
                         build.branch_dependency_id.id or False,
+                    'prebuild_id': build.prebuild_id and build.prebuild_id.id or False
                 }
                 self.create(cr, 1, new_build, context=context)
             return build.repo_id.id
