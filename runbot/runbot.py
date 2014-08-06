@@ -654,7 +654,8 @@ class runbot_build(osv.osv):
             extra_info.update({'state': 'duplicate', 'duplicate_id': duplicate_ids[0]})
             self.write(cr, uid, [duplicate_ids[0]], {'duplicate_id': build_id})
             if self.browse(cr, uid, duplicate_ids[0]).state != 'pending':
-                self.github_status(cr, uid, [build_id])
+                if build.repo_id.host_driver == 'github':
+                    self.github_status(cr, uid, [build_id])
         self.write(cr, uid, [build_id], extra_info, context=context)
         return build_id
 
@@ -848,36 +849,40 @@ class runbot_build(osv.osv):
         """Notify github of failed/successful builds"""
         runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
-            if build.state != 'duplicate' and build.duplicate_id:
-                self.github_status(cr, uid, [build.duplicate_id.id], context=context)
-            desc = "runbot build %s" % (build.dest,)
-            real_build = build.duplicate_id if build.state == 'duplicate' else build
-            if real_build.state == 'testing':
-                state = 'pending'
-            elif real_build.state in ('running', 'done'):
-                state = {
-                    'ok': 'success',
-                    'killed': 'error',
-                }.get(real_build.result, 'failure')
-                desc += " (runtime %ss)" % (real_build.job_time,)
-            else:
-                continue
+            if build.repo_id.host_driver != 'github':
+                raise Exception('Repository does not have a driver to use github')
+            if build.repository_id.
+                if build.state != 'duplicate' and build.duplicate_id:
+                    self.github_status(cr, uid, [build.duplicate_id.id], context=context)
+                desc = "runbot build %s" % (build.dest,)
+                real_build = build.duplicate_id if build.state == 'duplicate' else build
+                if real_build.state == 'testing':
+                    state = 'pending'
+                elif real_build.state in ('running', 'done'):
+                    state = {
+                        'ok': 'success',
+                        'killed': 'error',
+                    }.get(real_build.result, 'failure')
+                    desc += " (runtime %ss)" % (real_build.job_time,)
+                else:
+                    continue
 
-            status = {
-                "state": state,
-                "target_url": "http://%s/runbot/build/%s" % (runbot_domain, build.id),
-                "description": desc,
-                "context": "continuous-integration/runbot"
-            }
-            try:
-                build.repo_id.github('/repos/:owner/:repo/statuses/%s' % build.name, status)
-                _logger.debug("github status %s update to %s", build.name, state)
-            except Exception:
-                _logger.exception("github status error")
+                status = {
+                    "state": state,
+                    "target_url": "http://%s/runbot/build/%s" % (runbot_domain, build.id),
+                    "description": desc,
+                    "context": "continuous-integration/runbot"
+                }
+                try:
+                    build.repo_id.github('/repos/:owner/:repo/statuses/%s' % build.name, status)
+                    _logger.debug("github status %s update to %s", build.name, state)
+                except Exception:
+                    _logger.exception("github status error")
 
     def job_10_test_base(self, cr, uid, build, lock_path, log_path):
         build._log('test_base', 'Start test base module')
-        build.github_status()
+        if build.repo_id.host_driver == 'github':
+            build.github_status()
         # checkout source
         build.checkout()
         # run base test
@@ -917,7 +922,8 @@ class runbot_build(osv.osv):
         else:
             v['result'] = "ko"
         build.write(v)
-        build.github_status()
+        if build.repo_id.host_driver == 'github':
+            build.github_status()
 
         # run server
         cmd, mods = build.cmd()
@@ -1061,7 +1067,8 @@ class runbot_build(osv.osv):
             build._log('kill', 'Kill build %s' % build.dest)
             build.terminate()
             build.write({'result': 'killed', 'job': False})
-            build.github_status()
+            if build.repo_id.host_driver == 'github':
+                build.github_status()
 
     def reap(self, cr, uid, ids):
         while True:
