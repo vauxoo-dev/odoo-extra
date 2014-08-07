@@ -61,7 +61,52 @@ class runbot_prebuild(osv.osv):
             help="Script to execute before run build"),
         'script_posbuild': fields.text('Script Pos-Build',
             help="Script to execute after run build"),
+        'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', help="If this is a prebuild from PR this field is for set original prebuild"),
     }
+    """
+    def search_prebuild_pr(self, cr, uid, ids, context=None):
+         #self.search(cr, uid, [('')])
+        prebuild_branch_pool = self.poo.get('runbot.prebuild.branch')
+        prebuild_branch_ids = prebuild_branch_pool.search(cr, uid, [('check_pr', '=', True), ('prebuild_id', '=', ids)], context=context )
+        branch_id
+    """
+    def create_prebuild_pr(self, cr, uid, ids, context=None):
+        """
+        """
+        new_prebuild_ids = [ ]
+        branch_pool = self.pool.get('runbot.branch')
+        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+        for prebuild in self.browse(cr, uid, ids, context=context):
+            #import pdb;pdb.set_trace()
+            for prebuild_line in prebuild.module_branch_ids:
+                if prebuild_line.check_pr:
+                    branch_pr_ids = branch_pool.search(cr, uid, [('branch_base_id', '=', prebuild_line.branch_id.id)], context=context)
+                    #Get prebuild childs
+                    prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild.id)], context=context )
+                    for branch_pr in branch_pool.browse(cr, uid, branch_pr_ids, context=context):
+                        prebuild_pr_ids = prebuild_line_pool.search(cr, uid, [('branch_id', '=', branch_pr.id), ('prebuild_id', 'in', prebuild_child_ids)], limit=1)
+                        if prebuild_pr_ids:
+                            #if exist prebuild of pr no create new one
+                            continue
+                        #If not exist prebuild of this pr then create one
+                        new_prebuild_pr_id = self.copy(cr, uid, prebuild.id, {
+                            'name': prebuild.name + ' - ' + branch_pr.complete_name,
+                            'prebuild_parent_id': prebuild.id,
+                            'sticky': False,
+                        }, context=context)
+                        
+                        #Search prebuild lines for set check_pr = False. For not check pr of childs.
+                        new_prebuild_line_ids = prebuild_line_pool.search(cr, uid, [
+                            ('prebuild_id', '=', new_prebuild_pr_id),
+                        ], context=context)
+                        for new_prebuild_line in prebuild_line_pool.browse(cr, uid, new_prebuild_line_ids, context):
+                            new_data = { 'check_pr': False}
+                            if new_prebuild_line.branch_id.id == prebuild_line.branch_id.id:
+                                #Replace branch base by branch pr in new pre-build
+                                new_data.update({'branch_id': branch_pr.id})
+                            prebuild_line_pool.write(cr, uid, [new_prebuild_line.id], new_data, context=context)
+                        new_prebuild_ids.append( new_prebuild_pr_id )
+        return new_prebuild_ids
 
     def create_build(self, cr, uid, ids, context=None):
         if context is None:
@@ -175,7 +220,15 @@ class runbot_build(osv.osv):
                 module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
                 self.checkout_params(cr, uid, [build.id], main_branch_id=main_branch_id, module_branch_ids=module_branch_ids, modules_to_test=build.prebuild_id.modules, context=context)
 
+class runbot_repo(osv.osv):
+    _inherit = "runbot.repo"
 
+    def cron(self, cr, uid, ids=None, context=None):
+        prebuild_pool = self.pool.get('runbot.prebuild')
+        prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
+        prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
+        build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
+        return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
 
@@ -184,5 +237,3 @@ class RunbotController(RunbotController):
         res.update({'prebuild_id':build.prebuild_id,
                     'build':build})
         return res
-
-
