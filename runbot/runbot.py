@@ -1115,7 +1115,7 @@ class RunbotController(http.Controller):
             if search:
                 domain += ['|', ('dest', 'ilike', search), ('subject', 'ilike', search)]
 
-            build_ids = build_obj.search(cr, uid, domain, limit=int(limit))
+            build_ids = build_obj.search(cr, uid, domain, limit=int(limit), order='id DESC')
             branch_ids, build_by_branch_ids = [], {}
 
             if build_ids:
@@ -1129,12 +1129,14 @@ class RunbotController(http.Controller):
                     INNER JOIN runbot_build bu 
                        ON br.id=bu.branch_id 
                     WHERE bu.id in %s
-                    ORDER BY real_sticky DESC, bu.sequence DESC--, br.id DESC, bu.branch_dependency_id DESC
+                        OR ( (br.sticky AND bu.branch_dependency_id IS NULL) AND br.repo_id = %s )
+                    GROUP BY br.id, bu.branch_dependency_id, real_sticky
+                    ORDER BY real_sticky DESC, br.id DESC, MAX(bu.sequence) DESC
                 """
                 #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
                 #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
-                cr.execute(branch_query, (tuple(build_ids),))
-                branch_ids = uniq_list( [(br[0], br[1] or None) for br in cr.fetchall()] )
+                cr.execute(branch_query, (tuple(build_ids), repo.id))
+                branch_ids = [(br[0], br[1] or None) for br in cr.fetchall()]#uniq_list(  )
 
                 build_query = """
                     SELECT
@@ -1153,13 +1155,14 @@ class RunbotController(http.Controller):
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
                         WHERE bu.id in %s
+                           OR ( (br.sticky AND bu.branch_dependency_id IS NULL) AND br.repo_id = %s )
                         GROUP BY br.id, branch_dependency_id, bu.id
                     ) AS br_bu
                     WHERE
                         row <= 4
                     GROUP BY br_bu.branch_id, br_bu.branch_dependency_id
                 """
-                cr.execute(build_query, (tuple(build_ids),))
+                cr.execute(build_query, (tuple(build_ids), repo.id))
                 build_by_branch_ids = {
                     (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
