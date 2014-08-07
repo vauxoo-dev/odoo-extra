@@ -113,9 +113,13 @@
 
     <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
         <xpath expr="//t[@t-as='bu']//td//t[3]" position="inside">
-            <t t-if="bu['prebuild_id'].main_branch_id.name or bu['build'].branch_dependency_id.name">
-                <span t-if="bu['prebuild_id'].main_branch_id.name" t-esc="bu['prebuild_id'].main_branch_id.name" t-att-title="bu['subject']"/>
-                <span t-if="bu['build'].branch_dependency_id.name" t-esc="bu['build'].branch_dependency_id.name" t-att-title="bu['subject']"/><br/>
+            <t t-if="bu['prebuild_id'].main_branch_id.name">
+                <span t-if="bu['prebuild_id'].main_branch_id.name" t-esc="'prebuild main branch: ' + (bu['prebuild_id'].main_branch_id.repo_id.owner or '') +'/' + ( bu['prebuild_id'].main_branch_id.repo_id.repo or '') +'/' + bu['prebuild_id'].main_branch_id.branch_name  " t-att-title="bu['subject']"/>
+                <br/>
+                <t t-foreach="bu['prebuild_id'].module_branch_ids" t-as="module_branch">
+                    <span t-esc="'prebuild module branch: ' + (module_branch.branch_id.repo_id.owner or '') + '/' + ( module_branch.branch_id.repo_id.repo or '') + '/' + module_branch.branch_id.branch_name"/>
+                    <br/>
+                </t>
             </t>
         </xpath>
     </template>
