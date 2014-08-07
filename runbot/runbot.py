@@ -537,6 +537,13 @@ class runbot_branch(osv.osv):
         branch_ids = branch_pool.search(cr, uid, [('repo_id', 'in', repo_ids)], context=context)
         return branch_ids
 
+    def _get_complete_name(self, cr, uid, ids, field_name, arg, context=None):
+        res = {}
+        for branch in self.browse(cr, uid, ids, context=context):
+            res[branch.id] = '/'.join( map( lambda item: item or '', \
+                [branch.repo_owner, branch.repo_name, branch.branch_name]) )
+        return res
+    
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
@@ -559,6 +566,10 @@ class runbot_branch(osv.osv):
                 'runbot.branch': (lambda self, cr, uid, ids, context: ids, ['name'], 10 )
             },
         ),
+        'repo_owner': fields.related('repo_id', 'owner', type='char', string="Repo Owner", readonly=True, store=True, select=1),
+        'repo_name': fields.related('repo_id', 'repo', type='char', string="Repo Name", readonly=True, store=True, select=1),
+        'complete_name': fields.function(_get_complete_name, type='char', readonly=1,
+            string='Complete Name', store=True),
     }
 
     _sql_constraints = [

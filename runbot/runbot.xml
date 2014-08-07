@@ -81,6 +81,9 @@
                         <field name="state"/>
                         <field name="branch_base_name"/>
                         <field name="branch_base_id"/>
+                        <field name="repo_name"/>
+                        <field name="repo_owner"/>
+                        <field name="complete_name"/>
                     </group>
                 </sheet>
             </form>
@@ -97,6 +100,9 @@
                 <field name="state"/>
                 <field name="branch_base_name"/>
                 <field name="branch_base_id"/>
+                <field name="repo_name"/>
+                <field name="repo_owner"/>
+                <field name="complete_name"/>
             </tree>
         </field>
     </record>
@@ -107,11 +113,15 @@
                 <field name="name"/>
                 <field name="state"/>
                 <field name="repo_id"/>
+                <field name="repo_name"/>
+                <field name="repo_owner"/>
+                <field name="complete_name"/>
                 <filter string="Sticky" domain="[('sticky','=', True)]"/>
                 <separator />
                 <group expand="0" string="Group By...">
                     <filter string="Repo" domain="[]" context="{'group_by':'repo_id'}"/>
                     <filter string="Status" domain="[]" context="{'group_by':'state'}"/>
+                    <filter string="Owner" domain="[]" context="{'group_by':'repo_owner'}"/>
                 </group>
             </search>
         </field>
