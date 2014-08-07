@@ -155,18 +155,54 @@ class runbot_repo(osv.osv):
             result[repo.id] = os.path.join(root, 'repo', name)
         return result
 
-    def _get_base(self, cr, uid, ids, field_name, arg, context=None):
+    def _get_url_info(self, cr, uid, ids, field_names, arg, context=None):
         result = {}
         for repo in self.browse(cr, uid, ids, context=context):
+            result[repo.id] = {
+                'host': False,
+                'owner': False,
+                'repo': False,
+                'base': False,
+                'host_driver': False,
+                'host_url': False,
+                'url': repo.name,
+            }
+            if os.path.isdir( repo.name ):
+                result[repo.id]['host_driver'] = 'localpath'
+                result[repo.id]['host_url'] = 'localhost'
+                result[repo.id]['url'] = '%s%s'%( 'file://', repo.name )
             name = re.sub('.+@', '', repo.name)
             name = name.replace(':','/')
-            result[repo.id] = name
+            result[repo.id]['base'] = name
+            regex = "(?P<host>(git@|https://)([\w\.@]+)(/|:))(?P<owner>[\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
+            match_object = re.search( regex, repo.name )
+            if match_object:
+                result[repo.id]['host'] = match_object.group("host")
+                result[repo.id]['owner'] = match_object.group("owner")
+                result[repo.id]['repo'] = match_object.group("repo")
+                if 'github.com' in result[repo.id]['host']:
+                    result[repo.id]['host_driver'] = 'github'
+                    result[repo.id]['host_url'] = 'github.com'
+                    result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                elif 'bitbucket.org' in result[repo.id]['host']:
+                    result[repo.id]['host_driver'] = 'bitbucket'
+                    result[repo.id]['host_url'] = 'bitbucket.org'
+                    result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                else:
+                    pass
+                    #You can inherit this function for add more host's
         return result
 
     _columns = {
         'name': fields.char('Repository', required=True),
         'path': fields.function(_get_path, type='char', string='Directory', readonly=1),
-        'base': fields.function(_get_base, type='char', string='Base URL', readonly=1),
+        'base': fields.function(_get_url_info, type='char', string='Base URL', readonly=1, multi='url_info'),
+        'host': fields.function(_get_url_info, type='char', string='Host from URL', readonly=1, multi='url_info'),
+        'owner': fields.function(_get_url_info, type='char', string='Owner from URL', readonly=1, multi='url_info'),
+        'repo': fields.function(_get_url_info, type='char', string='Repo from URL', readonly=1, multi='url_info'),
+        'host_driver': fields.function(_get_url_info, type='char', string='Host driver from URL', readonly=1, multi='url_info'),
+        'host_url': fields.function(_get_url_info, type='char', string='URL host', readonly=1, multi='url_info'),
+        'url': fields.function(_get_url_info, type='char', string='URL repo', readonly=1, multi='url_info'),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
         'jobs': fields.char('Jobs'),
@@ -180,11 +216,14 @@ class runbot_repo(osv.osv):
             string='Extra dependencies',
             help="Community addon repos which need to be present to run tests."),
         'token': fields.char("Github token"),
+        'active': fields.boolean('Active'),
     }
+
     _defaults = {
         'testing': 1,
         'running': 1,
         'auto': True,
+        'active': True,
     }
 
     def domain(self, cr, uid, context=None):
@@ -214,23 +253,23 @@ class runbot_repo(osv.osv):
     def github(self, cr, uid, ids, url, payload=None, delete=False, context=None):
         """Return a http request to be sent to github"""
         for repo in self.browse(cr, uid, ids, context=context):
+            if repo.host_driver != 'github':
+                raise Exception('Repository does not have a driver to use github')
             if not repo.token:
                 raise Exception('Repository does not have a token to authenticate')
-            match_object = re.search('([^/]+)/([^/]+)/([^/.]+(.git)?)', repo.base)
-            if match_object:
-                url = url.replace(':owner', match_object.group(2))
-                url = url.replace(':repo', match_object.group(3))
-                url = 'https://api.%s%s' % (match_object.group(1),url)
-                session = requests.Session()
-                session.auth = (repo.token,'x-oauth-basic')
-                session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
-                if payload:
-                    response = session.post(url, data=simplejson.dumps(payload))
-                elif delete:
-                    response = session.delete(url)
-                else:
-                    response = session.get(url)
-                return response.json()
+            url = url.replace(':owner', repo.owner)
+            url = url.replace(':repo', repo.repo)
+            url = 'https://api.%s%s' % (repo.host_url, url)
+            session = requests.Session()
+            session.auth = (repo.token,'x-oauth-basic')
+            session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
+            if payload:
+                response = session.post(url, data=simplejson.dumps(payload))
+            elif delete:
+                response = session.delete(url)
+            else:
+                response = session.get(url)
+            return response.json()
 
     def update(self, cr, uid, ids, context=None):
         for repo in self.browse(cr, uid, ids, context=context):
@@ -270,29 +309,57 @@ class runbot_repo(osv.osv):
                 branch_id = branch_ids[0]
             else:
                 _logger.debug('repo %s found new branch %s', repo.name, name)
-                branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
+                try:
+                    branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
+                except:
+                    #Note: Sometimes make duplicate branch why? because use different cursor or why?
+                    continue
             branch = Branch.browse(cr, uid, [branch_id], context=context)[0]
             # skip build for old branches
             if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
                 continue
             # create build (and mark previous builds as skipped) if not found
             build_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('name', '=', sha)])
+            build_info = {
+                    'branch_id': branch.id,
+                    'name': sha,
+                    'author': author,
+                    'subject': subject,
+                    'date': dateutil.parser.parse(date[:19]),
+                    'modules': branch.repo_id.modules,
+            }
             if not build_ids:
                 if not branch.sticky:
-                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('prebuild_id', '=', prebuild_id)])
+                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('branch_dependency_id', '=', False), ('prebuild_id', '=', prebuild_id)])
                     Build.skip(cr, uid, to_be_skipped_ids)
+
+                _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
+                Build.create(cr, uid, build_info)
+                
                 if create_builds:#If create_builds==True then make repo as origin process. But if create_builds==False, make repo from pre-build
                     _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
-                    build_info = {
-                        'branch_id': branch.id,
+                    build_info.update({
                         'name': prebuild and prebuild.name or sha,
-                        'author': author,
-                        'subject': subject,
-                        'date': dateutil.parser.parse(date[:19]),
-                        'modules': branch.repo_id.modules,
                         'prebuild_id': prebuild_id,
-                    }
+                    })
                     build_new_ids.append( Build.create(cr, uid, build_info) )
+
+            #Get PR build of repository depends
+            repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids]
+            branch_depends_ids = Branch.search(cr, uid, [('branch_name', '=', branch.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
+            branch_depends_pr_ids = Branch.search(cr, uid, [('branch_base_id', 'in', branch_depends_ids)], context=context)
+            for branch_depends_pr in Branch.browse(cr, uid, branch_depends_pr_ids, context=context):
+                build_depends_pr_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('branch_dependency_id', '=', branch_depends_pr.id)], context=context)
+                if not build_depends_pr_ids:
+                    sha = branch_depends_pr.repo_id.owner + "/" + branch_depends_pr.repo_id.repo + "-" + branch_depends_pr.name
+                    build_info.update({
+                        'branch_dependency_id': branch_depends_pr.id,
+                        'name': sha,
+                        'subject': sha,
+                        'branch_id': branch.id,
+                    })
+                    _logger.debug('repo %s branch %s new build found PR %s into dependency branch %s', branch.repo_id.name, branch.name, sha, branch_depends_pr.name)
+                    Build.create(cr, uid, build_info)
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
@@ -396,30 +463,107 @@ class runbot_branch(osv.osv):
     _name = "runbot.branch"
     _order = 'name'
 
-    def _get_branch_name(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
+    def _get_branch_data(self, cr, uid, ids, field_names, arg, context=None):
+        res = {}
         for branch in self.browse(cr, uid, ids, context=context):
-            r[branch.id] = branch.name.split('/')[-1]
-        return r
+            res[branch.id] = {
+                'branch_base_name': False,
+                'branch_base_id': False,
+                'branch_name': False,
+                'branch_url': False,
+            }
+            res[branch.id]['branch_name'] = branch.name.split('/')[-1]
+            if 'branch_name' in field_names or 'branch_url' in field_names:
+                if branch.repo_id.host_driver == 'github':
+                    if re.match('^[0-9]+$', res[branch.id]['branch_name']):
+                        res[branch.id]['branch_url'] = "%s/pull/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                    else:
+                        res[branch.id]['branch_url'] = "%s/tree/%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                elif branch.repo_id.host_driver == 'bitbucket':
+                    if re.match('^[0-9]+$', res[branch.id]['branch_name'] or ''):
+                        res[branch.id]['branch_url'] = False#ToDo: Process PR branch
+                    else:
+                        res[branch.id]['branch_url'] = "%s/src/?at=%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                else:
+                    pass#Add inherit function for add more host
 
-    def _get_branch_url(self, cr, uid, ids, field_name, arg, context=None):
-        r = {}
-        for branch in self.browse(cr, uid, ids, context=context):
-            if re.match('^[0-9]+$', branch.branch_name):
-                r[branch.id] = "https://%s/pull/%s" % (branch.repo_id.base, branch.branch_name)
-            else:
-                r[branch.id] = "https://%s/tree/%s" % (branch.repo_id.base, branch.branch_name)
-        return r
+            if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
+                if branch.name.startswith('refs/pull/'):
+                    merged = False
+                    if branch.repo_id.host_driver == 'github' and branch.repo_id.token:
+                        #using github for get branch_base from pr branch
+                        pull_number = branch.name[len('refs/pull/'):]
+                        pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s' % pull_number)
+                        if 'Not Found' == pr.get('message'):
+                            #Search into PR merged
+                            pr = branch.repo_id.github('/repos/:owner/:repo/pulls/%s/merge' % pull_number)
+                            if pr.has_key('base'):
+                                merged = True
+                        if pr.has_key('base'):
+                            res[branch.id]['branch_base_name'] = pr['base']['ref']
+                    else:
+                        #using local branch for get branch_base from pr branch
+                        branch_head_ids = self.search(cr, uid, [
+                            ('repo_id.id', '=', branch.repo_id.id),
+                            ('name', 'like', 'refs/heads/%'),
+                            ('id', '<>', branch.id),
+                        ])
+                        branch_head_names = self._get_branch_data(cr, uid, branch_head_ids, ['branch_name'], arg=arg, context=context)#No saved into database
+                        common_refs = {}
+                        for branch_head_name in branch_head_names:
+                            bhn = branch_head_names[branch_head_name]['branch_name']
+                            if bhn:
+                                commit = branch.repo_id.git(['merge-base', branch.name, bhn]).strip()
+                                if commit:
+                                    cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
+                                    common_refs[ bhn ] = branch.repo_id.git(cmd).strip()
+                        if common_refs:
+                            name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
+                            res[branch.id]['branch_base_name'] = name
+
+                    if res[branch.id]['branch_base_name']:
+                        branch_base_ids = branch.search([
+                                ('repo_id', '=', branch.repo_id.id),
+                                ('name', '=', 'refs/heads/%s'%( res[branch.id]['branch_base_name'] ) ),
+                            ])
+                        if branch_base_ids:
+                            res[branch.id]['branch_base_id'] = branch_base_ids[0].id
+                            if merged:
+                                self.write(cr, uid, branch.id, {'state': 'merged'})#Check stability of write into fields.function
+        return res
+
+    def _get_branch_from_repo(self, cr, uid, repo_ids, context=None):
+        branch_pool = self.pool.get('runbot.branch')#We need pool.get because is other self source
+        branch_ids = branch_pool.search(cr, uid, [('repo_id', 'in', repo_ids)], context=context)
+        return branch_ids
 
     _columns = {
         'repo_id': fields.many2one('runbot.repo', 'Repository', required=True, ondelete='cascade', select=1),
         'name': fields.char('Ref Name', required=True),
-        'branch_name': fields.function(_get_branch_name, type='char', string='Branch', readonly=1, store=True),
-        'branch_url': fields.function(_get_branch_url, type='char', string='Branch url', readonly=1),
+        'branch_name': fields.function(_get_branch_data, type='char', string='Branch', multi='title_info', readonly=1, store=True),
+        'branch_url': fields.function(_get_branch_data, type='char', string='Branch url', multi='title_info', readonly=1, store=True),
         'sticky': fields.boolean('Sticky', select=1),
         'coverage': fields.boolean('Coverage'),
         'state': fields.char('Status'),
+        'branch_base_name': fields.function( _get_branch_data, type='char',
+            string='Branch base name', readonly=1, multi='branch_data',
+            store={
+                'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+                'runbot.branch': (lambda self, cr, uid, ids, context: ids, ['name'], 10 )
+            },
+        ),
+        'branch_base_id': fields.function(_get_branch_data, type='many2one', readonly=1,
+            string='Branch base', relation='runbot.branch', multi='branch_data',
+            store={
+                'runbot.repo': (_get_branch_from_repo, ['token'], 10),
+                'runbot.branch': (lambda self, cr, uid, ids, context: ids, ['name'], 10 )
+            },
+        ),
     }
+
+    _sql_constraints = [
+        ('branch_name_repo_unique', 'unique (name,repo_id)', 'The name of the branch must be unique per repo !')
+    ]
 
 class runbot_build(osv.osv):
     _name = "runbot.build"
@@ -429,7 +573,8 @@ class runbot_build(osv.osv):
         r = {}
         for build in self.browse(cr, uid, ids, context=context):
             nickname = dashes(build.branch_id.name.split('/')[2])[:32]
-            r[build.id] = "%05d-%s-%s" % (build.id, nickname, build.name[:6])
+            dest = "%05d-%s-%s" % (build.id, nickname, build.name[:6])
+            r[build.id] = dashes(dest)
         return r
 
     def _get_time(self, cr, uid, ids, field_name, arg, context=None):
@@ -483,6 +628,7 @@ class runbot_build(osv.osv):
         'job_time': fields.function(_get_time, type='integer', string='Job time'),
         'job_age': fields.function(_get_age, type='integer', string='Job age'),
         'duplicate_id': fields.many2one('runbot.build', 'Corresponding Build'),
+        'branch_dependency_id': fields.many2one('runbot.branch', 'Branch depends', required=False, ondelete='cascade', select=1),
     }
 
     _defaults = {
@@ -497,9 +643,9 @@ class runbot_build(osv.osv):
 
         # detect duplicate
         domain = [
-            ('repo_id','=',build.repo_id.duplicate_id.id), 
-            ('name', '=', build.name), 
-            ('duplicate_id', '=', False), 
+            ('repo_id','=',build.repo_id.duplicate_id.id),
+            ('name', '=', build.name),
+            ('duplicate_id', '=', False),
             '|', ('result', '=', False), ('result', '!=', 'skipped')
         ]
         duplicate_ids = self.search(cr, uid, domain, context=context)
@@ -508,7 +654,8 @@ class runbot_build(osv.osv):
             extra_info.update({'state': 'duplicate', 'duplicate_id': duplicate_ids[0]})
             self.write(cr, uid, [duplicate_ids[0]], {'duplicate_id': build_id})
             if self.browse(cr, uid, duplicate_ids[0]).state != 'pending':
-                self.github_status(cr, uid, [build_id])
+                if build.repo_id.host_driver == 'github':
+                    self.github_status(cr, uid, [build_id])
         self.write(cr, uid, [build_id], extra_info, context=context)
         return build_id
 
@@ -539,45 +686,6 @@ class runbot_build(osv.osv):
 
         return port
 
-    def get_closest_branch_name(self, cr, uid, ids, target_repo_id, hint_branches, context=None):
-        """Return the name of the closest common branch between both repos
-        Find common branch names, get merge-base with the branch name and
-        return the most recent.
-        Fallback repos will not have always have the same names for branch
-        names.
-        Pull request branches should not have any association with PR of other
-        repos
-        """
-        branch_pool = self.pool['runbot.branch']
-        for build in self.browse(cr, uid, ids, context=context):
-            branch, repo = build.branch_id, build.repo_id
-            name = branch.branch_name
-            # Use github API to find name of branch on which the PR is made
-            if repo.token and name.startswith('refs/pull/'):
-                pull_number = name[len('refs/pull/'):]
-                pr = repo.github('/repos/:owner/:repo/pulls/%s' % pull_number)
-                name = 'refs/heads/' + pr['base']['ref']
-            # Find common branch names between repo and target repo
-            branch_ids = branch_pool.search(cr, uid, [('repo_id.id', '=', repo.id)])
-            target_ids = branch_pool.search(cr, uid, [('repo_id.id', '=', target_repo_id)])
-            branch_names = branch_pool.read(cr, uid, branch_ids, ['branch_name', 'name'], context=context)
-            target_names = branch_pool.read(cr, uid, target_ids, ['branch_name', 'name'], context=context)
-            possible_repo_branches = set([i['branch_name'] for i in branch_names if i['name'].startswith('refs/heads')])
-            possible_target_branches = set([i['branch_name'] for i in target_names if i['name'].startswith('refs/heads')])
-            possible_branches = possible_repo_branches.intersection(possible_target_branches)
-            if name not in possible_branches:
-                hinted_branches = possible_branches.intersection(hint_branches)
-                if hinted_branches:
-                    possible_branches = hinted_branches
-                common_refs = {}
-                for target_branch_name in possible_branches:
-                    commit = repo.git(['merge-base', branch.name, target_branch_name]).strip()
-                    cmd = ['log', '-1', '--format=%cd', '--date=iso', commit]
-                    common_refs[target_branch_name] = repo.git(cmd).strip()
-                if common_refs:
-                    name = sorted(common_refs.iteritems(), key=operator.itemgetter(1), reverse=True)[0][0]
-            return name
-
     def path(self, cr, uid, ids, *l, **kw):
         for build in self.browse(cr, uid, ids, context=None):
             root = self.pool['runbot.repo'].root(cr, uid)
@@ -590,6 +698,7 @@ class runbot_build(osv.osv):
             return build.path('openerp', *l)
 
     def checkout(self, cr, uid, ids, context=None):
+        branch_pool = self.pool.get('runbot.branch')
         for build in self.browse(cr, uid, ids, context=context):
             # starts from scratch
             if os.path.isdir(build.path()):
@@ -599,7 +708,9 @@ class runbot_build(osv.osv):
             mkdirs([build.path("logs"), build.server('addons')])
 
             # checkout branch
-            build.branch_id.repo_id.git_export(build.name, build.path())
+            principal_branch_version = 'pull' in build.name and build.branch_id.branch_name or build.name
+            #export with last version when is a pull request build
+            build.branch_id.repo_id.git_export(principal_branch_version, build.path())
 
             # TODO use git log to get commit message date and author
 
@@ -620,10 +731,24 @@ class runbot_build(osv.osv):
                     )
                 build.write({'modules': modules_to_test})
                 hint_branches = set()
-                for extra_repo in build.repo_id.dependency_ids:
-                    closest_name = build.get_closest_branch_name(extra_repo.id, hint_branches)
-                    hint_branches.add(closest_name)
-                    extra_repo.git_export(closest_name, build.path())
+
+                #Find branch from repository dependencies with same name of principal branch (odoo version)
+                repo_depend_ids = [repo_depend.id for repo_depend in build.repo_id.dependency_ids]
+                branch_depends_ids = branch_pool.search(cr, uid, [('branch_name', '=', build.branch_id.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
+
+                pr_original_branch_id = build.branch_dependency_id and build.branch_dependency_id.branch_base_id and build.branch_dependency_id.branch_base_id.id or False
+                try:
+                    pr_original_branch_index = branch_depends_ids.index( pr_original_branch_id )
+                except ValueError:
+                    pr_original_branch_index = False
+                if pr_original_branch_index is not False:
+                    #Replace original branch with PR
+                    branch_depends_ids[ pr_original_branch_index ] = build.branch_dependency_id.id
+
+                #Make environment
+                for branch_depend in branch_pool.browse(cr, uid, branch_depends_ids, context=context):
+                    branch_depend.repo_id.git_export(branch_depend.name, build.path())
+
                 # Finally mark all addons to move to openerp/addons
                 additional_modules += [
                     os.path.dirname(module)
@@ -687,7 +812,7 @@ class runbot_build(osv.osv):
             if grep(build.server("tools/config.py"), "no-netrpc"):
                 cmd.append("--no-netrpc")
             if grep(build.server("tools/config.py"), "log-db"):
-                cmd += ["--log-db=%s" % cr.dbname] 
+                cmd += ["--log-db=%s" % cr.dbname]
 
         # coverage
         #coverage_file_path=os.path.join(log_path,'coverage.pickle')
@@ -724,6 +849,8 @@ class runbot_build(osv.osv):
         """Notify github of failed/successful builds"""
         runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
+            if build.repo_id.host_driver != 'github':
+                raise Exception('Repository does not have a driver to use github')
             if build.state != 'duplicate' and build.duplicate_id:
                 self.github_status(cr, uid, [build.duplicate_id.id], context=context)
             desc = "runbot build %s" % (build.dest,)
@@ -753,7 +880,8 @@ class runbot_build(osv.osv):
 
     def job_10_test_base(self, cr, uid, build, lock_path, log_path):
         build._log('test_base', 'Start test base module')
-        build.github_status()
+        if build.repo_id.host_driver == 'github':
+            build.github_status()
         # checkout source
         build.checkout()
         # run base test
@@ -793,7 +921,8 @@ class runbot_build(osv.osv):
         else:
             v['result'] = "ko"
         build.write(v)
-        build.github_status()
+        if build.repo_id.host_driver == 'github':
+            build.github_status()
 
         # run server
         cmd, mods = build.cmd()
@@ -849,6 +978,8 @@ class runbot_build(osv.osv):
                     'name': build.name,
                     'author': build.author,
                     'subject': build.subject,
+                    'branch_dependency_id': build.branch_dependency_id and \
+                        build.branch_dependency_id.id or False,
                     'prebuild_id': build.prebuild_id and build.prebuild_id.id or False
                 }
                 self.create(cr, 1, new_build, context=context)
@@ -935,7 +1066,8 @@ class runbot_build(osv.osv):
             build._log('kill', 'Kill build %s' % build.dest)
             build.terminate()
             build.write({'result': 'killed', 'job': False})
-            build.github_status()
+            if build.repo_id.host_driver == 'github':
+                build.github_status()
 
     def reap(self, cr, uid, ids):
         while True:
@@ -988,7 +1120,7 @@ class RunbotController(http.Controller):
         repo_ids = repo_obj.search(cr, uid, [], order='id')
         repos = repo_obj.browse(cr, uid, repo_ids)
         if not repo and repos:
-            repo = repos[0] 
+            repo = repos[0]
 
         context = {
             'repos': repos,
@@ -1015,54 +1147,67 @@ class RunbotController(http.Controller):
 
             if build_ids:
                 branch_query = """
-                SELECT br.id FROM runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id WHERE bu.id in %s
-                ORDER BY bu.sequence DESC
+                    SELECT br.id AS branch_id, 
+                        bu.branch_dependency_id,
+                        CASE WHEN br.sticky AND bu.branch_dependency_id IS NULL THEN True
+                             ELSE False
+                        END AS real_sticky
+                    FROM runbot_branch br 
+                    INNER JOIN runbot_build bu 
+                       ON br.id=bu.branch_id 
+                    WHERE bu.id in %s
+                    ORDER BY real_sticky DESC, bu.sequence DESC--, br.id DESC, bu.branch_dependency_id DESC
                 """
-                sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
-                sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
+                #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
+                #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
                 cr.execute(branch_query, (tuple(build_ids),))
-                branch_ids = uniq_list(sticky_branch_ids + [br[0] for br in cr.fetchall()])
+                branch_ids = uniq_list( [(br[0], br[1] or None) for br in cr.fetchall()] )
 
                 build_query = """
-                    SELECT 
-                        branch_id, 
+                    SELECT
+                        branch_id,
+                        branch_dependency_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
                         max(case when br_bu.row = 2 then br_bu.build_id end),
                         max(case when br_bu.row = 3 then br_bu.build_id end),
                         max(case when br_bu.row = 4 then br_bu.build_id end)
                     FROM (
-                        SELECT 
-                            br.id AS branch_id, 
+                        SELECT
+                            br.id AS branch_id,
                             bu.id AS build_id,
-                            row_number() OVER (PARTITION BY branch_id) AS row
-                        FROM 
-                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id 
-                        WHERE 
-                            br.id in %s
-                        GROUP BY br.id, bu.id
-                        ORDER BY br.id, bu.id DESC
+                            bu.branch_dependency_id AS branch_dependency_id,
+                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
+                        FROM
+                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
+                        WHERE bu.id in %s
+                        GROUP BY br.id, branch_dependency_id, bu.id
                     ) AS br_bu
                     WHERE
                         row <= 4
-                    GROUP BY br_bu.branch_id;
+                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id
                 """
-                cr.execute(build_query, (tuple(branch_ids),))
+                cr.execute(build_query, (tuple(build_ids),))
                 build_by_branch_ids = {
-                    rec[0]: [r for r in rec[1:] if r is not None] for rec in cr.fetchall()
+                    (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
-
-            branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
+            
+            #branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
 
-            def branch_info(branch):
+            def branch_info(branch, branch_dependency):
                 return {
                     'branch': branch,
-                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id]]
+                    'branch_dependency': branch_dependency,
+                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id, branch_dependency and branch_dependency.id or None]]
                 }
 
             context.update({
-                'branches': [branch_info(b) for b in branches],
+                'branches': [ branch_info( 
+                                branch_obj.browse(cr, uid, [branch_id], context=request.context)[0],\
+                                branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0]\
+                         ) \
+                         for branch_id, branch_dependency_id in branch_ids ],
                 'testing': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','testing')]),
                 'running': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','running')]),
                 'pending': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','pending')]),
@@ -1081,6 +1226,7 @@ class RunbotController(http.Controller):
             'result': real_build.result,
             'subject': build.subject,
             'author': build.author,
+            'dependency':build.branch_dependency_id.name,
             'dest': build.dest,
             'real_dest': real_build.dest,
             'job_age': s2human(real_build.job_age),
