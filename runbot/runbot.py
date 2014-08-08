@@ -217,6 +217,10 @@ class runbot_repo(osv.osv):
             help="Community addon repos which need to be present to run tests."),
         'token': fields.char("Github token"),
         'active': fields.boolean('Active'),
+        'type': fields.selection([
+            ('main', 'Main'),
+            ('module', 'Modules'),
+          ], required=True, string="Type", help="Modules: Copy to addons path\nMain: Copy to principal path"),
     }
 
     _defaults = {

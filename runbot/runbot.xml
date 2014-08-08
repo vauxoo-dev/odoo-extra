@@ -20,6 +20,7 @@
                     <group string="Params">
                         <field name="testing"/>
                         <field name="running"/>
+                        <field name="type"/>
                         <field name="base"/>
                         <field name="host"/>
                         <field name="owner"/>
@@ -46,6 +47,7 @@
         <field name="arch" type="xml">
             <tree string="repos">
                 <field name="name"/>
+                <field name="type"/>
                 <field name="testing"/>
                 <field name="running"/>
                 <field name="auto"/>
