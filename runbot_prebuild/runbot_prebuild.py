@@ -75,10 +75,39 @@ class runbot_prebuild(osv.osv):
     """
     #TODO: Add constraint that add prebuild_lines of least one main repo type
     
-    def create_build_sticky(self, cr, uid, ids, context=None):
+    def get_prebuilds_with_new_commit(self, cr, uid, ids, context=None):
         """
         Create build of sticky build with changes in your branches
         """
+        build_pool = self.pool.get('runbot.build')
+        build_line_pool = self.pool.get('runbot.build.line')
+        repo_pool = self.pool.get('runbot.repo')
+        branch_pool = self.pool.get('runbot.branch')
+        for prebuild_sticky_id in ids:
+            prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_sticky_id)], context=context)
+            build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', prebuild_child_ids + [prebuild_sticky_id])], context=context)
+            build_line_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids)], context=context)
+            #import pdb;pdb.set_trace()
+            if build_line_ids:
+                query = "SELECT branch_id, repo_id FROM runbot_build_line WHERE id IN %s GROUP BY branch_id, repo_id"
+                cr.execute( query, (tuple(build_line_ids),) )
+                res = cr.fetchall()
+                branch_ids = [ r[0] for r in res ]
+                repo_ids = [ r[1] for r in res ]
+                #build_line_branch_datas = build_line_pool.read(cr, uid, build_line_ids, ['branch_id'], context=context)
+                #branch_ids = list( set([build_line_branch_data['branch_id'] for build_line_branch_data in build_line_branch_datas]) )
+                #for r in res:
+                    #repo_pool.get_ref_data(cr, uid, [r[0]], r[1], context=None):
+                #TODO: update repo_ids
+                for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
+                    refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
+                    if refs and refs[branch.repo_id.id]:
+                        ref_data = refs[branch.repo_id.id][0]
+                        sha = ref_data['sha']
+                        build_line_with_sha_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids), ('sha', '=', sha)], context=context, limit=1)
+                        if not build_line_with_sha_ids:
+                            pass#TODO: Make it
+                            #But in this point checkout should be functionallity with sha previous.
         return {}
 
     def create_prebuild_pr(self, cr, uid, ids, context=None):
@@ -200,10 +229,6 @@ class runbot_build(osv.osv):
                 # v6 rename bin -> openerp
                 if os.path.isdir(build.path('bin/addons')):
                     shutil.move(build.path('bin'), build.server())
-
-                # move all addons to server addons path
-                for module in glob.glob( build.path('addons/*') ):
-                    shutil.move(module, build.server('addons'))
                 
                 for prebuild_line in build.prebuild_id.module_branch_ids:
                     if prebuild_line.branch_id.repo_id.type == 'main':
@@ -217,7 +242,6 @@ class runbot_build(osv.osv):
                     ref_datas = prebuild_line.branch_id.repo_id.get_ref_data(prebuild_line.branch_id.name)
                     ref_data = ref_datas[prebuild_line.branch_id.repo_id.id][0]
                     
-                    
                     build_line_ids = build_line_obj.create(cr, uid, {
                         'build_id': build.id,
                         'branch_id': prebuild_line.branch_id.id,
@@ -225,41 +249,11 @@ class runbot_build(osv.osv):
                         'author': ref_data['author'],
                         'subject': ref_data['subject'],
                         'date': ref_data['date'],
-                        #TODO: Add more fields
                     }, context=context)
-                    
-                """
-                for module_branch in branch_obj.browse(cr, uid, module_branch_ids, context=context):
-                    if module_branch.repo_id.type == 'main':
-                        path = build.path()
-                    elif module_branch.repo_id.type == 'module':
-                        path = build.server("addons")
-                    else:
-                        pass #TODO: raise error
-                    module_branch.repo_id.git_export(module_branch.name, path)
                 
-                    #git for-each-ref --shell --format="ref=%(refname)%(committerdate:iso8601)%(objectname)" refs/heads/borrar
-                    #Note: If a module name is duplicate no make error. TODO: But is good make a log.info.
-                """
-                """
-                fields = ['refname','objectname','committerdate:iso8601','authorname','subject', module_branch.name]
-                fmt = "%00".join(["%("+field+")" for field in fields])
-                git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', ])
-                git_refs = git_refs.strip()
-
-                refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-
-                for name, sha, date, author, subject in refs:
-                """
-                """#This funtion there is into cmd function
-                if not modules_to_test:
-                    #Find modules to test from the folder branch
-                    modules_to_test = ','.join(
-                        os.path.basename(os.path.dirname(module_openerp))
-                        for module_openerp in glob.glob(build.path('*/__openerp__.py'))
-                    )
-                """
-            #build.write({'modules': modules_to_test})
+                # move all addons to server addons path
+                for module in glob.glob( build.path('addons/*') ):
+                    shutil.move(module, build.server('addons'))
 
     def checkout(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
@@ -285,6 +279,7 @@ class runbot_build_line(osv.osv):
         'date': fields.datetime('Commit date'),
         'author': fields.char('Author'),
         'subject': fields.text('Subject'),
+        'repo_id': fields.related('branch_id', 'repo_id', type="many2one", relation="runbot.repo", string="Repository", readonly=True, store=True, ondelete='cascade', select=1),
     }
 
 class runbot_repo(osv.osv):
@@ -297,16 +292,17 @@ class runbot_repo(osv.osv):
             fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
             fmt = "%00".join(["%("+field+")" for field in fields])
             git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', ref])
-            git_refs = git_refs.strip()
-            refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-            for name, sha, date, author, subject in refs:
-                res[repo.id].append({
-                    'name': name,
-                    'sha': sha,
-                    'date': dateutil.parser.parse(date[:19]),
-                    'author': author,
-                    'subject': subject
-                })
+            if git_refs:
+                git_refs = git_refs.strip()
+                refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
+                for name, sha, date, author, subject in refs:
+                    res[repo.id].append({
+                        'name': name,
+                        'sha': sha,
+                        'date': dateutil.parser.parse(date[:19]),
+                        'author': author,
+                        'subject': subject
+                    })
         return res
 
     def cron(self, cr, uid, ids=None, context=None):
@@ -314,6 +310,7 @@ class runbot_repo(osv.osv):
         prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
         prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
         #build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
+        prebuild_pool.get_prebuilds_with_new_commit(cr, uid, prebuild_sticky_ids, context=context)
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
