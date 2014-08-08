@@ -86,14 +86,8 @@ class runbot_prebuild(osv.osv):
             help="Script to execute after run build"),
         'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', help="If this is a prebuild from PR this field is for set original prebuild"),
     }
-    """
-    def search_prebuild_pr(self, cr, uid, ids, context=None):
-         #self.search(cr, uid, [('')])
-        prebuild_branch_pool = self.poo.get('runbot.prebuild.branch')
-        prebuild_branch_ids = prebuild_branch_pool.search(cr, uid, [('check_pr', '=', True), ('prebuild_id', '=', ids)], context=context )
-        branch_id
-    """
     #TODO: Add constraint that add prebuild_lines of least one main repo type
+    #TODO: Add related to repo.type store=True
     
     def get_prebuilds_with_new_commit(self, cr, uid, ids, context=None):
         """
@@ -224,10 +218,10 @@ class runbot_build(osv.osv):
 
     _columns = {
         'prebuild_id': fields.many2one('runbot.prebuild', string='Runbot Pre-Build',
-            required=False, help="This is the origin of instance data."),
+            required=False, help="This is the origin of instance data.", copy=True),
         'line_ids': fields.one2many('runbot.build.line', 'build_id',
-            string='Build branches lines', readonly=True),
-        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work'),
+            string='Build branches lines', readonly=True, copy=True),
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
     }
 
     def force_schedule(self, cr, uid, ids, context=None):
@@ -242,39 +236,37 @@ class runbot_build(osv.osv):
         build_line_obj = self.pool.get('runbot.build.line')
         #main_branch = branch_obj.browse(cr, uid, [main_branch_id], context=context)[0]
         for build in self.browse(cr, uid, ids, context=context):
-            if build.prebuild_id:
-                # starts from scratch
-                if os.path.isdir(build.path()):
-                    shutil.rmtree(build.path())
-                _logger.debug('Creating build in path "%s"'%( build.path() ))
+            if not build.line_ids:
+                build.skip()
+            # starts from scratch
+            if os.path.isdir(build.path()):
+                shutil.rmtree(build.path())
+            _logger.debug('Creating build in path "%s"'%( build.path() ))
 
-                # runbot log path
-                mkdirs([build.path("logs"), build.server('addons')])
+            # runbot log path
+            mkdirs([build.path("logs"), build.server('addons')])
 
-                # v6 rename bin -> openerp
-                if os.path.isdir(build.path('bin/addons')):
-                    shutil.move(build.path('bin'), build.server())
-                
-                for build_line in build.line_ids:
-                    if build_line.repo_id.type == 'main':
-                        path = build.path()
-                    elif build_line.repo_id.type == 'module':
-                        path = build.server("addons")
-                    else:
-                        pass #TODO: raise error
-                    build_line.repo_id.git_export( build_line.sha or build_line.branch_id.name, path )
-                # move all addons to server addons path
-                for module in glob.glob( build.path('addons/*') ):
-                    shutil.move(module, build.server('addons'))
+            # v6 rename bin -> openerp
+            if os.path.isdir(build.path('bin/addons')):
+                shutil.move(build.path('bin'), build.server())
+            
+            for build_line in build.line_ids:
+                if build_line.repo_id.type == 'main':
+                    path = build.path()
+                elif build_line.repo_id.type == 'module':
+                    path = build.server("addons")
+                else:
+                    pass #TODO: raise error
+                build_line.repo_id.git_export( build_line.sha or build_line.branch_id.name, path )
+            # move all addons to server addons path
+            for module in glob.glob( build.path('addons/*') ):
+                shutil.move(module, build.server('addons'))
 
     def checkout(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
             if not build.prebuild_id:
-                #TODO: Split branches for use same function "checkout_params"
                 return super(runbot_build, self).checkout(cr, uid, ids, context=context)
             else:
-                #module_branch_ids = [module_branch_id.branch_id.id for module_branch_id in build.prebuild_id.module_branch_ids]
-                #self.checkout_params(cr, uid, [build.id], module_branch_ids=module_branch_ids, modules_to_test=build.prebuild_id.modules, context=context)
                 self.checkout_prebuild(cr, uid, [build.id], context=context)
 
 class runbot_build_line(osv.osv):
