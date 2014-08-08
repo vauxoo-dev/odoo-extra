@@ -45,6 +45,7 @@
                             <field name="module_branch_ids"/>
                             <field name="repo_id"/>
                             <field name="sticky"/>
+                            <field name="team_id"/>
                             <field name="modules"/>
                             <!--<field name="modules_to_exclude"/>-->
                             <field name="language"/>
@@ -97,6 +98,39 @@
         </record>
         <menuitem id="menu_prebuild" action="action_prebuild" parent="runbot.menu_runbot"/>
 
+        <!-- Runbot Team -->
+
+        <record id="view_runbot_team_tree" model="ir.ui.view">
+            <field name="model">runbot.team</field>
+            <field name="arch" type="xml">
+                <tree string="Runbot Teams">
+                    <field name="name"/>
+                    <field name="description"/>
+                </tree>
+            </field>
+        </record>
+        <record id="view_runbot_team_form" model="ir.ui.view">
+            <field name="model">runbot.team</field>
+            <field name="arch" type="xml">
+                <form string="team" version="7.0">
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="description"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        <record id="action_runbot_team" model="ir.actions.act_window">
+            <field name="name">Team</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">runbot.team</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+        <menuitem id="menu_runbotteam" action="action_runbot_team" parent="runbot.menu_runbot"/>
+
         <!--inherit runbot.build-->
         <record id="view_build_form_inh_prebuild_01" model="ir.ui.view">
             <field name="model">runbot.build</field>
@@ -104,6 +138,7 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='name']" position="after">
                     <field name="prebuild_id"/>
+                    <field name="team_id"/>
                 </xpath>
                 <xpath expr="//header/button[@name='reset']" position="after">
                     <button name="force_schedule" type="object" string="Force run build"/>
@@ -112,13 +147,26 @@
         </record>
 
     <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
+        <xpath expr="//t[@t-if='repo']/ul/li/a" position="replace">
+            <t t-if="repo and not team">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b style="font-size: 18px;"><t t-esc="repo.base"/></b><b class="caret"></b></a>
+            </t>
+            <t t-if="team">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b style="font-size: 18px;"><t t-esc="team.name"/></b><b class="caret"></b></a>
+            </t>
+        </xpath>
+        <xpath expr="//t[@t-as='repo']" position="after">
+            <t t-foreach='teams' t-as='team'>
+                <li><a t-attf-href="/runbot/team/{{slug(team)}}"><t t-esc="team.name"/></a></li>
+            </t>
+        </xpath>
         <xpath expr="//t[@t-as='bu']//td//t[3]" position="inside">
             <t t-if="bu['prebuild_id'].main_branch_id.name or bu['build'].branch_dependency_id.name">
                 <span t-if="bu['prebuild_id'].main_branch_id.name" t-esc="bu['prebuild_id'].main_branch_id.name" t-att-title="bu['subject']"/>
                 <span t-if="bu['build'].branch_dependency_id.name" t-esc="bu['build'].branch_dependency_id.name" t-att-title="bu['subject']"/><br/>
             </t>
         </xpath>
-    </template>
+</template>
 
 
     </data>
