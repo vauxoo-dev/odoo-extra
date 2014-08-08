@@ -349,7 +349,7 @@ class runbot_repo(osv.osv):
                     build_new_ids.append( Build.create(cr, uid, build_info) )
 
             #Get PR build of repository depends
-            repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids]
+            repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids if repo_depend.auto]
             branch_depends_ids = Branch.search(cr, uid, [('branch_name', '=', branch.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
             branch_depends_pr_ids = Branch.search(cr, uid, [('branch_base_id', 'in', branch_depends_ids)], context=context)
             for branch_depends_pr in Branch.browse(cr, uid, branch_depends_pr_ids, context=context):
