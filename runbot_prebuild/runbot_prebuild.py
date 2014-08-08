@@ -348,7 +348,7 @@ class RunbotController(RunbotController):
         build_obj = registry['runbot.build']
         team_obj = registry['runbot.team']
         repo_obj = registry['runbot.repo']
-        team_ids = repo_obj.search(cr, uid, [], order='id')
+        team_ids = team_obj.search(cr, uid, [], order='id')
         teams = team_obj.browse(cr, uid, team_ids)
         res.qcontext.update({'teams':teams})
         if team:
