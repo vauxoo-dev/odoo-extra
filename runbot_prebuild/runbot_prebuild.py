@@ -51,9 +51,6 @@ class runbot_team(osv.Model):
     _columns = {
         'name': fields.char('Name', help='Name of the team'),
         'description': fields.text('Desciption', help='A little description of the team'),
-        'private': fields.boolean('Private', help='Select this chekbox if you want become this team in a private team and only you can access to this team with an user and his password'),
-        'user': fields.char('User'),
-        'password': fields.char('Password'),
     }
 
 class runbot_prebuild(osv.osv):
