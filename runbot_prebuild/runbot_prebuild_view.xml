@@ -11,7 +11,7 @@
                         <group>
                             <field name="branch_id"/>
                             <field name="check_pr"/>
-                            <field name="sha_commit"/>
+                            <field name="sha"/>
                             <field name="repo_id"/>
                         </group>
                     </sheet>
@@ -24,7 +24,7 @@
                 <tree string="Pre-Builds">
                     <field name="branch_id"/>
                     <field name="check_pr"/>
-                    <field name="sha_commit"/>
+                    <field name="sha"/>
                     <field name="repo_id"/>
                 </tree>
             </field>
@@ -41,9 +41,7 @@
                     <sheet>
                         <group>
                             <field name="name"/>
-                            <field name="main_branch_id"/>
                             <field name="module_branch_ids"/>
-                            <field name="repo_id"/>
                             <field name="sticky"/>
                             <field name="modules"/>
                             <!--<field name="modules_to_exclude"/>-->
@@ -60,9 +58,7 @@
             <field name="arch" type="xml">
                 <tree string="Pre-Builds">
                     <field name="name"/>
-                    <field name="main_branch_id"/>
                     <field name="module_branch_ids"/>
-                    <field name="repo_id"/>
                     <field name="sticky"/>
                     <field name="modules"/>
                     <!--<field name="modules_to_exclude"/>-->
@@ -76,9 +72,7 @@
             <field name="model">runbot.prebuild</field>
             <field name="arch" type="xml">
                 <search string="Search Pre-builds">
-                    <field name="main_branch_id"/>
                     <field name="name"/>
-                    <field name="repo_id"/>
                     <field name="sticky"/>
                     <field name="modules"/>
                     <field name="modules_to_exclude"/>
@@ -104,6 +98,22 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='name']" position="after">
                     <field name="prebuild_id"/>
+                    <field name="line_ids">
+                        <tree string="Build Lines">
+                            <field name="branch_id"/>
+                            <field name="sha"/>
+                            <field name="author"/>
+                            <field name="subject"/>
+                            <field name="date"/>
+                        </tree>
+                        <form string="Build Lines">
+                            <field name="branch_id"/>
+                            <field name="sha"/>
+                            <field name="author"/>
+                            <field name="subject"/>
+                            <field name="date"/>
+                        </form>
+                    </field>
                 </xpath>
                 <xpath expr="//header/button[@name='reset']" position="after">
                     <button name="force_schedule" type="object" string="Force run build"/>
@@ -113,11 +123,9 @@
 
     <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
         <xpath expr="//t[@t-as='bu']//td//t[3]" position="inside">
-            <t t-if="bu['prebuild_id'].main_branch_id.name">
-                <span t-if="bu['prebuild_id'].main_branch_id.name" t-esc="'prebuild main branch: ' + (bu['prebuild_id'].main_branch_id.repo_id.owner or '') +'/' + ( bu['prebuild_id'].main_branch_id.repo_id.repo or '') +'/' + bu['prebuild_id'].main_branch_id.branch_name  " t-att-title="bu['subject']"/>
-                <br/>
-                <t t-foreach="bu['prebuild_id'].module_branch_ids" t-as="module_branch">
-                    <span t-esc="'prebuild module branch: ' + (module_branch.branch_id.repo_id.owner or '') + '/' + ( module_branch.branch_id.repo_id.repo or '') + '/' + module_branch.branch_id.branch_name"/>
+            <t t-if="bu['prebuild_id'].name">
+                <t t-foreach="bu['prebuild_id'].module_branch_ids" t-as="prebuild_line">
+                    <span t-esc="'prebuild_line.branch_id.complete_name"/>
                     <br/>
                 </t>
             </t>
