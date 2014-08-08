@@ -8,6 +8,13 @@ import glob
 import time
 from openerp.addons.runbot.runbot import RunbotController
 import dateutil.parser
+from openerp.addons.runbot.runbot import uniq_list
+from openerp.addons.runbot.runbot import flatten
+from openerp.http import request
+from openerp import http
+from openerp.addons.website.models.website import slug
+from openerp.addons.website_sale.controllers.main import QueryURL
+from openerp import SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
@@ -42,11 +49,24 @@ class runbot_prebuild_branch(osv.osv):
     }
 
 
+class runbot_team(osv.Model):
+    '''
+    Object used to create team to work in runbot
+    '''
+
+    _name = 'runbot.team'
+
+    _columns = {
+        'name': fields.char('Name', help='Name of the team'),
+        'description': fields.text('Desciption', help='A little description of the team'),
+    }
+
 class runbot_prebuild(osv.osv):
     _name = "runbot.prebuild"
 
     _columns = {
         'name': fields.char("Name", size=128, required=True),
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work'),
         'module_branch_ids': fields.one2many('runbot.prebuild.branch', 'prebuild_id',
             string='Branches of modules', copy=True,
             help="Community addons branches which need to run tests."),
@@ -203,6 +223,7 @@ class runbot_build(osv.osv):
             required=False, help="This is the origin of instance data."),
         'line_ids': fields.one2many('runbot.build.line', 'build_id',
             string='Build branches lines', readonly=True),
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work'),
     }
 
     def force_schedule(self, cr, uid, ids, context=None):
@@ -314,6 +335,100 @@ class runbot_repo(osv.osv):
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
+
+    @http.route(['/runbot',
+                 '/runbot/repo/<model("runbot.repo"):repo>',
+                 '/runbot/team/<model("runbot.team"):team>'],
+                 type='http', auth="public", website=True)
+    def repo(self, repo=None, team=None, search='', limit='100', refresh='', **post):
+        registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
+        res = super(RunbotController, self).repo(repo=repo, search=search, limit=limit, refresh=refresh, **post)
+
+        branch_obj = registry['runbot.branch']
+        build_obj = registry['runbot.build']
+        team_obj = registry['runbot.team']
+        repo_obj = registry['runbot.repo']
+        team_ids = repo_obj.search(cr, uid, [], order='id')
+        teams = team_obj.browse(cr, uid, team_ids)
+        res.qcontext.update({'teams':teams})
+        if team:
+            filters = {key: post.get(key, '1') for key in ['pending', 'testing', 'running', 'done']}
+            build_ids = build_obj.search(cr, uid, [('team_id', '=', team.id)], limit=int(limit))
+            branch_ids, build_by_branch_ids = [], {}
+
+            if build_ids:
+                branch_query = """
+                    SELECT br.id AS branch_id,
+                        bu.branch_dependency_id,
+                        CASE WHEN br.sticky AND bu.branch_dependency_id IS NULL THEN True
+                             ELSE False
+                        END AS real_sticky
+                    FROM runbot_branch br
+                    INNER JOIN runbot_build bu
+                       ON br.id=bu.branch_id
+                    WHERE bu.id in %s
+                    ORDER BY real_sticky DESC, bu.sequence DESC--, br.id DESC, bu.branch_dependency_id DESC
+                """
+                #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
+                #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
+                cr.execute(branch_query, (tuple(build_ids),))
+                branch_ids = uniq_list( [(br[0], br[1] or None) for br in cr.fetchall()] )
+
+                build_query = """
+                    SELECT
+                        branch_id,
+                        branch_dependency_id,
+                        max(case when br_bu.row = 1 then br_bu.build_id end),
+                        max(case when br_bu.row = 2 then br_bu.build_id end),
+                        max(case when br_bu.row = 3 then br_bu.build_id end),
+                        max(case when br_bu.row = 4 then br_bu.build_id end)
+                    FROM (
+                        SELECT
+                            br.id AS branch_id,
+                            bu.id AS build_id,
+                            bu.branch_dependency_id AS branch_dependency_id,
+                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
+                        FROM
+                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
+                        WHERE bu.id in %s
+                        GROUP BY br.id, branch_dependency_id, bu.id
+                    ) AS br_bu
+                    WHERE
+                        row <= 4
+                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id
+                """
+                cr.execute(build_query, (tuple(build_ids),))
+                build_by_branch_ids = {
+                    (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
+                }
+
+            #branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
+            build_ids = flatten(build_by_branch_ids.values())
+            build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
+
+            def branch_info(branch, branch_dependency):
+                return {
+                    'branch': branch,
+                    'branch_dependency': branch_dependency,
+                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[branch.id, branch_dependency and branch_dependency.id or None]]
+                }
+
+            res.qcontext.update({
+                'branches': [ branch_info(
+                                branch_obj.browse(cr, uid, [branch_id], context=request.context)[0],\
+                                branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0]\
+                         ) \
+                         for branch_id, branch_dependency_id in branch_ids ],
+                'testing': build_obj.search_count(cr, uid, [('team_id','=',team.id), ('state','=','testing')]),
+                'team': team,
+                'running': build_obj.search_count(cr, uid, [('team_id','=',team.id), ('state','=','running')]),
+                'pending': build_obj.search_count(cr, uid, [('team_id','=',team.id), ('state','=','pending')]),
+                'qu': QueryURL('/runbot/team/'+slug(team), search=search, limit=limit, refresh=refresh, **filters),
+                'filters': filters,
+            })
+
+        return res
+
 
     def build_info(self, build):
         res = super(RunbotController, self).build_info(build)
