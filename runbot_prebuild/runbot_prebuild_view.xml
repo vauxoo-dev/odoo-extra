@@ -173,7 +173,7 @@
         <xpath expr="//t[@t-as='bu']//td//t[3]" position="inside">
             <t t-if="bu['prebuild_id'].name">
                 <t t-foreach="bu['prebuild_id'].module_branch_ids" t-as="prebuild_line">
-                    <span t-esc="'prebuild_line.branch_id.complete_name"/>
+                    <span t-esc="prebuild_line.branch_id.complete_name"/>
                     <br/>
                 </t>
             </t>
