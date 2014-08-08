@@ -97,33 +97,34 @@ class runbot_prebuild(osv.osv):
         build_line_pool = self.pool.get('runbot.build.line')
         repo_pool = self.pool.get('runbot.repo')
         branch_pool = self.pool.get('runbot.branch')
+        build_new_ids = []
         for prebuild_sticky_id in ids:
             prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_sticky_id)], context=context)
             build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', prebuild_child_ids + [prebuild_sticky_id])], context=context)
             build_line_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids)], context=context)
             if build_line_ids:
+                #Get all branches from build_line of this prebuild_sticky
                 query = "SELECT branch_id, repo_id FROM runbot_build_line WHERE id IN %s GROUP BY branch_id, repo_id"
                 cr.execute( query, (tuple(build_line_ids),) )
                 res = cr.fetchall()
                 branch_ids = [ r[0] for r in res ]
-                repo_ids = [ r[1] for r in res ]
-                #build_line_branch_datas = build_line_pool.read(cr, uid, build_line_ids, ['branch_id'], context=context)
-                #branch_ids = list( set([build_line_branch_data['branch_id'] for build_line_branch_data in build_line_branch_datas]) )
-                #for r in res:
-                    #repo_pool.get_ref_data(cr, uid, [r[0]], r[1], context=None):
-                #TODO: update repo_ids
+                
+                #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
                     refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
                         sha = ref_data['sha']
-                        build_line_with_sha_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids), ('sha', '=', sha)], context=context, limit=1)
+                        build_line_with_sha_ids = build_line_pool.search(cr, uid, [('branch_id', '=', branch.id),('build_id', 'in', build_ids), ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
-                            pass#TODO: Make it
-                            #But in this point checkout should be functionallity with sha previous.
+                            #If not last commit then create build with last commit
+                            build_new_id = self.create_build(cr, uid, [prebuild_sticky_id], context=context)
+                            build_new_ids.append( build_new_id )
             else:
-                pass#TODO: Create build if not exists 
-        return {}
+                #If not build exists then create one
+                build_new_id = self.create_build(cr, uid, [prebuild_sticky_id], context=context)
+                build_new_ids.append( build_new_id )
+        return build_new_ids
 
     def create_prebuild_pr(self, cr, uid, ids, context=None):
         """
@@ -318,7 +319,7 @@ class runbot_repo(osv.osv):
         prebuild_pool = self.pool.get('runbot.prebuild')
         prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
         prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
-        #build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
+        build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
         prebuild_pool.get_prebuilds_with_new_commit(cr, uid, prebuild_sticky_ids, context=context)
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
