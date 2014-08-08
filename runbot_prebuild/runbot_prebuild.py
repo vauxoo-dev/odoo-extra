@@ -255,27 +255,14 @@ class runbot_build(osv.osv):
                 if os.path.isdir(build.path('bin/addons')):
                     shutil.move(build.path('bin'), build.server())
                 
-                for prebuild_line in build.prebuild_id.module_branch_ids:
-                    if prebuild_line.branch_id.repo_id.type == 'main':
+                for build_line in build.line_ids:
+                    if build_line.repo_id.type == 'main':
                         path = build.path()
-                    elif prebuild_line.branch_id.repo_id.type == 'module':
+                    elif build_line.repo_id.type == 'module':
                         path = build.server("addons")
                     else:
                         pass #TODO: raise error
-                    prebuild_line.branch_id.repo_id.git_export(prebuild_line.branch_id.name, path)
-                    
-                    ref_datas = prebuild_line.branch_id.repo_id.get_ref_data(prebuild_line.branch_id.name)
-                    ref_data = ref_datas[prebuild_line.branch_id.repo_id.id][0]
-                    
-                    build_line_ids = build_line_obj.create(cr, uid, {
-                        'build_id': build.id,
-                        'branch_id': prebuild_line.branch_id.id,
-                        'sha': ref_data['sha'],
-                        'author': ref_data['author'],
-                        'subject': ref_data['subject'],
-                        'date': ref_data['date'],
-                    }, context=context)
-                
+                    build_line.repo_id.git_export( build_line.sha or build_line.branch_id.name, path )
                 # move all addons to server addons path
                 for module in glob.glob( build.path('addons/*') ):
                     shutil.move(module, build.server('addons'))
