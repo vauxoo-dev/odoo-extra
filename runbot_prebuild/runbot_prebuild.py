@@ -107,7 +107,6 @@ class runbot_prebuild(osv.osv):
             prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_sticky_id)], context=context)
             build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', prebuild_child_ids + [prebuild_sticky_id])], context=context)
             build_line_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids)], context=context)
-            #import pdb;pdb.set_trace()
             if build_line_ids:
                 query = "SELECT branch_id, repo_id FROM runbot_build_line WHERE id IN %s GROUP BY branch_id, repo_id"
                 cr.execute( query, (tuple(build_line_ids),) )
@@ -194,6 +193,7 @@ class runbot_prebuild(osv.osv):
                 'date': time.strftime("%Y-%m-%d %H:%M:%S"),#TODO: Get this value
                 'modules': prebuild.modules,
                 'prebuild_id': prebuild.id,#Important field for custom build and custom checkout
+                'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
             }
             build_id = build_obj.create(cr, uid, build_info)
             build_ids.append( build_id )

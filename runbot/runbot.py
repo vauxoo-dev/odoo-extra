@@ -345,6 +345,7 @@ class runbot_repo(osv.osv):
                     build_info.update({
                         'name': prebuild and prebuild.name or sha,
                         'prebuild_id': prebuild_id,
+                        'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
                     })
                     build_new_ids.append( Build.create(cr, uid, build_info) )
 
@@ -995,7 +996,8 @@ class runbot_build(osv.osv):
                     'subject': build.subject,
                     'branch_dependency_id': build.branch_dependency_id and \
                         build.branch_dependency_id.id or False,
-                    'prebuild_id': build.prebuild_id and build.prebuild_id.id or False
+                    'prebuild_id': build.prebuild_id and build.prebuild_id.id or False,
+                    'team_id': build.prebuild_id and build.prebuild_id and build.prebuild_id.team_id and build.prebuild_id.team_id.id or False,
                 }
                 self.create(cr, 1, new_build, context=context)
             return build.repo_id.id
