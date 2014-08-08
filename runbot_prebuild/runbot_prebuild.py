@@ -73,7 +73,8 @@ class runbot_prebuild(osv.osv):
         prebuild_branch_ids = prebuild_branch_pool.search(cr, uid, [('check_pr', '=', True), ('prebuild_id', '=', ids)], context=context )
         branch_id
     """
-
+    #TODO: Add constraint that add prebuild_lines of least one main repo type
+    
     def create_build_sticky(self, cr, uid, ids, context=None):
         """
         Create build of sticky build with changes in your branches
@@ -211,25 +212,19 @@ class runbot_build(osv.osv):
                         path = build.server("addons")
                     else:
                         pass #TODO: raise error
-                    #sha = prebuild_line.branch_id.repo_id.git_export(prebuild_line.branch_id.name, path)#TODO: Get sha
+                    prebuild_line.branch_id.repo_id.git_export(prebuild_line.branch_id.name, path)
                     
-                    #Make a function with this
-                    fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
-                    fmt = "%00".join(["%("+field+")" for field in fields])
-                    git_refs = prebuild_line.branch_id.repo_id.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', prebuild_line.branch_id.name])
-                    git_refs = git_refs.strip()
-                    refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-                    name, sha, date, author, subject = [False]*5
-                    if refs:
-                        name, sha, date, author, subject = refs[0]
-
+                    ref_datas = prebuild_line.branch_id.repo_id.get_ref_data(prebuild_line.branch_id.name)
+                    ref_data = ref_datas[prebuild_line.branch_id.repo_id.id][0]
+                    
+                    
                     build_line_ids = build_line_obj.create(cr, uid, {
                         'build_id': build.id,
                         'branch_id': prebuild_line.branch_id.id,
-                        'sha': sha,
-                        'author': author,
-                        'subject': subject,
-                        'date': dateutil.parser.parse(date[:19]),
+                        'sha': ref_data['sha'],
+                        'author': ref_data['author'],
+                        'subject': ref_data['subject'],
+                        'date': ref_data['date'],
                         #TODO: Add more fields
                     }, context=context)
                     
@@ -294,6 +289,25 @@ class runbot_build_line(osv.osv):
 
 class runbot_repo(osv.osv):
     _inherit = "runbot.repo"
+
+    def get_ref_data(self, cr, uid, ids, ref, context=None):
+        res = {}
+        for repo in self.browse(cr, uid, ids, context=context):
+            res[repo.id] = []
+            fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
+            fmt = "%00".join(["%("+field+")" for field in fields])
+            git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', ref])
+            git_refs = git_refs.strip()
+            refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
+            for name, sha, date, author, subject in refs:
+                res[repo.id].append({
+                    'name': name,
+                    'sha': sha,
+                    'date': dateutil.parser.parse(date[:19]),
+                    'author': author,
+                    'subject': subject
+                })
+        return res
 
     def cron(self, cr, uid, ids=None, context=None):
         prebuild_pool = self.pool.get('runbot.prebuild')
