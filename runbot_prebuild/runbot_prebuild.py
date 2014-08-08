@@ -127,6 +127,8 @@ class runbot_prebuild(osv.osv):
                         if not build_line_with_sha_ids:
                             pass#TODO: Make it
                             #But in this point checkout should be functionallity with sha previous.
+            else:
+                pass#TODO: Create build if not exists 
         return {}
 
     def create_prebuild_pr(self, cr, uid, ids, context=None):
@@ -174,19 +176,20 @@ class runbot_prebuild(osv.osv):
         build_obj = self.pool.get('runbot.build')
         build_ids = []
         for prebuild in self.browse(cr, uid, ids, context=context):
-            module_repositories = [prebuild_branch.branch_id.repo_id for prebuild_branch in prebuild.module_branch_ids]
-
             #Update repository but no create default build
             context.update({'create_builds': False})
-            for prebuild_branch in prebuild.module_branch_ids:
-                try:
-                    repo_obj.update_git(cr, uid, prebuild_branch.branch_id.repo_id, prebuild=prebuild, context=context)
-                except:
-                    #TODO: warning if no internet
-                    pass
+            
+            #Get build_line current info
+            build_line_datas = []
+            for prebuild_line in prebuild.module_branch_ids:
+                refs = repo_obj.get_ref_data(cr, uid, [prebuild_line.branch_id.repo_id.id], prebuild_line.branch_id.name, context=context)
+                if refs and refs[prebuild_line.repo_id.id]:
+                    ref_data = refs[prebuild_line.repo_id.id][0]
+                    ref_data.update({'branch_id': prebuild_line.branch_id.id})
+                    build_line_datas.append( (0, 0, ref_data) )
 
             build_info = {
-                'branch_id': prebuild_branch.branch_id.id,#Last branch of for
+                'branch_id': prebuild_line.branch_id.id,#Any branch. Not use it. Last of for.
                 'name': prebuild.name,#TODO: Get this value
                 'author': prebuild.name,#TODO: Get this value
                 'subject': prebuild.name,#TODO: Get this value
@@ -194,6 +197,7 @@ class runbot_prebuild(osv.osv):
                 'modules': prebuild.modules,
                 'prebuild_id': prebuild.id,#Important field for custom build and custom checkout
                 'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
+                'line_ids': build_line_datas,
             }
             build_id = build_obj.create(cr, uid, build_info)
             build_ids.append( build_id )
@@ -295,12 +299,16 @@ class runbot_build_line(osv.osv):
             ondelete='cascade', select=1),
         'branch_id': fields.many2one('runbot.branch', 'Branch', required=True,
             ondelete='cascade', select=1),
+        'refname': fields.char('Ref Name'),
         'sha': fields.char('SHA commit', size=40,
             help='Version of commit or sha', required=True),
         'date': fields.datetime('Commit date'),
         'author': fields.char('Author'),
         'subject': fields.text('Subject'),
-        'repo_id': fields.related('branch_id', 'repo_id', type="many2one", relation="runbot.repo", string="Repository", readonly=True, store=True, ondelete='cascade', select=1),
+        'committername': fields.char('Committer'),
+        'repo_id': fields.related('branch_id', 'repo_id', type="many2one", \
+            relation="runbot.repo", string="Repository", readonly=True, store=True, \
+            ondelete='cascade', select=1),
     }
 
 class runbot_repo(osv.osv):
@@ -310,19 +318,20 @@ class runbot_repo(osv.osv):
         res = {}
         for repo in self.browse(cr, uid, ids, context=context):
             res[repo.id] = []
-            fields = ['refname','objectname','committerdate:iso8601','authorname','subject']
+            fields = ['refname','objectname','committerdate:iso8601','authorname','subject','committername']
             fmt = "%00".join(["%("+field+")" for field in fields])
             git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', ref])
             if git_refs:
                 git_refs = git_refs.strip()
                 refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-                for name, sha, date, author, subject in refs:
+                for refname, objectname, committerdate, author, subject, committername in refs:
                     res[repo.id].append({
-                        'name': name,
-                        'sha': sha,
-                        'date': dateutil.parser.parse(date[:19]),
+                        'refname': refname,
+                        'sha': objectname,
+                        'date': dateutil.parser.parse(committerdate[:19]),
                         'author': author,
-                        'subject': subject
+                        'subject': subject,
+                        'committername': committername,
                     })
         return res
 

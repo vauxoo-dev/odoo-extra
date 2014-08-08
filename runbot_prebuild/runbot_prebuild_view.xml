@@ -136,17 +136,21 @@
                     <field name="line_ids">
                         <tree string="Build Lines">
                             <field name="branch_id"/>
+                            <field name="refname"/>
                             <field name="sha"/>
+                            <field name="date"/>
                             <field name="author"/>
                             <field name="subject"/>
-                            <field name="date"/>
+                            <field name="committername"/>
                         </tree>
                         <form string="Build Lines">
                             <field name="branch_id"/>
+                            <field name="refname"/>
                             <field name="sha"/>
+                            <field name="date"/>
                             <field name="author"/>
                             <field name="subject"/>
-                            <field name="date"/>
+                            <field name="committername"/>
                         </form>
                     </field>
                 </xpath>
