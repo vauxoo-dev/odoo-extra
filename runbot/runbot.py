@@ -624,27 +624,27 @@ class runbot_build(osv.osv):
         return result
 
     _columns = {
-        'branch_id': fields.many2one('runbot.branch', 'Branch', required=True, ondelete='cascade', select=1),
+        'branch_id': fields.many2one('runbot.branch', 'Branch', required=True, ondelete='cascade', select=1, copy=True),
         'repo_id': fields.related('branch_id', 'repo_id', type="many2one", relation="runbot.repo", string="Repository", readonly=True, store=True, ondelete='cascade', select=1),
-        'name': fields.char('Revno', required=True, select=1),
-        'port': fields.integer('Port'),
+        'name': fields.char('Revno', required=True, select=1, copy=True),
+        'port': fields.integer('Port', copy=False),
         'dest': fields.function(_get_dest, type='char', string='Dest', readonly=1, store=True),
         'domain': fields.function(_get_domain, type='char', string='URL'),
-        'date': fields.datetime('Commit date'),
-        'author': fields.char('Author'),
-        'subject': fields.text('Subject'),
-        'sequence': fields.integer('Sequence', select=1),
-        'modules': fields.char("Modules to Install"),
-        'result': fields.char('Result'), # ok, ko, warn, skipped, killed
-        'pid': fields.integer('Pid'),
-        'state': fields.char('Status'), # pending, testing, running, done, duplicate
-        'job': fields.char('Job'), # job_*
-        'job_start': fields.datetime('Job start'),
-        'job_end': fields.datetime('Job end'),
-        'job_time': fields.function(_get_time, type='integer', string='Job time'),
-        'job_age': fields.function(_get_age, type='integer', string='Job age'),
-        'duplicate_id': fields.many2one('runbot.build', 'Corresponding Build'),
-        'branch_dependency_id': fields.many2one('runbot.branch', 'Branch depends', required=False, ondelete='cascade', select=1),
+        'date': fields.datetime('Commit date', copy=True),
+        'author': fields.char('Author', copy=True),
+        'subject': fields.text('Subject', copy=True),
+        'sequence': fields.integer('Sequence', select=1, copy=False),
+        'modules': fields.char("Modules to Install", copy=True),
+        'result': fields.char('Result', copy=False), # ok, ko, warn, skipped, killed
+        'pid': fields.integer('Pid', copy=False),
+        'state': fields.char('Status', copy=False), # pending, testing, running, done, duplicate
+        'job': fields.char('Job', copy=False), # job_*
+        'job_start': fields.datetime('Job start', copy=False),
+        'job_end': fields.datetime('Job end', copy=False),
+        'job_time': fields.function(_get_time, type='integer', string='Job time', copy=False),
+        'job_age': fields.function(_get_age, type='integer', string='Job age', copy=False),
+        'duplicate_id': fields.many2one('runbot.build', 'Corresponding Build', copy=False),
+        'branch_dependency_id': fields.many2one('runbot.branch', 'Branch depends', required=False, ondelete='cascade', select=1, copy=True),
     }
 
     _defaults = {
@@ -988,18 +988,7 @@ class runbot_build(osv.osv):
                 build.write({'state': 'pending', 'sequence':sequence, 'result': '' })
             # or duplicate it
             elif build.state in ['running', 'done', 'duplicate']:
-                new_build = {
-                    'sequence': sequence,
-                    'branch_id': build.branch_id.id,
-                    'name': build.name,
-                    'author': build.author,
-                    'subject': build.subject,
-                    'branch_dependency_id': build.branch_dependency_id and \
-                        build.branch_dependency_id.id or False,
-                    'prebuild_id': build.prebuild_id and build.prebuild_id.id or False,
-                    'team_id': build.prebuild_id and build.prebuild_id and build.prebuild_id.team_id and build.prebuild_id.team_id.id or False,
-                }
-                self.create(cr, 1, new_build, context=context)
+                self.copy(cr, 1, build.id, {}, context=context)
             return build.repo_id.id
 
     def schedule(self, cr, uid, ids, context=None):
