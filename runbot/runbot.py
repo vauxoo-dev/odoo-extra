@@ -538,8 +538,8 @@ class runbot_branch(osv.osv):
                             ])
                         if branch_base_ids:
                             res[branch.id]['branch_base_id'] = branch_base_ids[0].id
-                            if merged:
-                                self.write(cr, uid, branch.id, {'state': 'merged'})#Check stability of write into fields.function
+                            #if merged:
+                                #self.write(cr, uid, branch.id, {'state': 'merged'})#TODO: Check stability of write into fields.function
         return res
 
     def _get_branch_from_repo(self, cr, uid, repo_ids, context=None):

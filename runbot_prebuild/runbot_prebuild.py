@@ -38,10 +38,10 @@ class runbot_prebuild_branch(osv.osv):
         'branch_id': fields.many2one('runbot.branch', 'Branch', required=True,
             ondelete='cascade', select=1),
         'check_pr': fields.boolean('Check PR',
-            help='If is True, this will check Pull Request for this branch in this prebuild'),
+            help='If is True, this will check Pull Request for this branch in this prebuild', copy=False),
         'check_new_commit': fields.boolean('Check New Commit',
             help='If is True, this will check new commit for this branch in this prebuild'\
-            ' and will make a new build.'),#ToDo: Use this feature.
+            ' and will make a new build.', copy=False),
         'sha': fields.char('SHA commit', size=40,
             help='Empty=Currently version\nSHA=Get this version in builds'),
         'prebuild_id': fields.many2one('runbot.prebuild', 'Pre-Build', required=True,
@@ -164,16 +164,15 @@ class runbot_prebuild(osv.osv):
                             'sticky': False,
                         }, context=context)
                         
-                        #Search prebuild lines for set check_pr = False. For not check pr of childs.
+                        #Search prebuild lines for change old branch by new pr branch
                         new_prebuild_line_ids = prebuild_line_pool.search(cr, uid, [
                             ('prebuild_id', '=', new_prebuild_pr_id),
                         ], context=context)
                         for new_prebuild_line in prebuild_line_pool.browse(cr, uid, new_prebuild_line_ids, context):
-                            new_data = { 'check_pr': False}
                             if new_prebuild_line.branch_id.id == prebuild_line.branch_id.id:
                                 #Replace branch base by branch pr in new pre-build
-                                new_data.update({'branch_id': branch_pr.id})
-                            prebuild_line_pool.write(cr, uid, [new_prebuild_line.id], new_data, context=context)
+                                prebuild_line_pool.write(cr, uid, [new_prebuild_line.id], 
+                                    {'branch_id': branch_pr.id}, context=context)
                         new_prebuild_ids.append( new_prebuild_pr_id )
         return new_prebuild_ids
 
