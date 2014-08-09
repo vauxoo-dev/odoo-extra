@@ -6,6 +6,7 @@ import shutil
 import logging
 import glob
 import time
+import werkzeug
 from openerp.addons.runbot.runbot import RunbotController
 import dateutil.parser
 from openerp.addons.runbot.runbot import uniq_list
@@ -87,8 +88,12 @@ class runbot_prebuild(osv.osv):
         'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', help="If this is a prebuild from PR this field is for set original prebuild"),
     }
     #TODO: Add constraint that add prebuild_lines of least one main repo type
+<<<<<<< HEAD
     #TODO: Add related to repo.type store=True
-    
+
+=======
+
+>>>>>>> ef568e1a3ab02019ab9f446d2a3dce047c8144bf
     def get_prebuilds_with_new_commit(self, cr, uid, ids, context=None):
         """
         Create build of sticky build with changes in your branches
@@ -108,7 +113,7 @@ class runbot_prebuild(osv.osv):
                 cr.execute( query, (tuple(build_line_ids),) )
                 res = cr.fetchall()
                 branch_ids = [ r[0] for r in res ]
-                
+
                 #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
                     refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
@@ -150,7 +155,7 @@ class runbot_prebuild(osv.osv):
                             'prebuild_parent_id': prebuild.id,
                             'sticky': False,
                         }, context=context)
-                        
+
                         #Search prebuild lines for set check_pr = False. For not check pr of childs.
                         new_prebuild_line_ids = prebuild_line_pool.search(cr, uid, [
                             ('prebuild_id', '=', new_prebuild_pr_id),
@@ -173,7 +178,7 @@ class runbot_prebuild(osv.osv):
         for prebuild in self.browse(cr, uid, ids, context=context):
             #Update repository but no create default build
             context.update({'create_builds': False})
-            
+
             #Get build_line current info
             build_line_datas = []
             for prebuild_line in prebuild.module_branch_ids:
@@ -250,7 +255,6 @@ class runbot_build(osv.osv):
             # v6 rename bin -> openerp
             if os.path.isdir(build.path('bin/addons')):
                 shutil.move(build.path('bin'), build.server())
-            
             for build_line in build.line_ids:
                 if build_line.repo_id.type == 'main':
                     path = build.path()
@@ -418,9 +422,41 @@ class RunbotController(RunbotController):
 
         return res
 
-
     def build_info(self, build):
         res = super(RunbotController, self).build_info(build)
         res.update({'prebuild_id':build.prebuild_id,
                     'build':build})
         return res
+
+    @http.route(['/runbot/build/<build_id>'], type='http', auth="public", website=True)
+    def build(self, build_id=None, search=None, **post):
+        registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
+        res = super(RunbotController, self).build(build_id=build_id, search=search, **post)
+        build_brw = registry['runbot.build'].browse(cr, uid, int(build_id))
+        if build_brw.team_id.name:
+            res.qcontext.update({'team':build_brw.team_id})
+        return res
+
+
+    @http.route(['/runbot/build/<build_id>/force'], type='http', auth="public", website=True)
+    def build_force(self, build_id, **post):
+        print 'post2', post
+        registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
+        res = super(RunbotController, self).build_force(build_id, **post)
+        build_brw = registry['runbot.build'].browse(cr, uid, int(build_id))
+        if build_brw.team_id.name:
+            return werkzeug.utils.redirect('/runbot/team/%s' % build_brw.team_id.id)
+        else:
+            return res
+
+    @http.route(['/runbot/build/<build_id>/label/<label_id>'], type='http', auth="public", method='POST')
+    def toggle_label(self, build_id=None, label_id=None, search=None, **post):
+        registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
+
+        build_brw = registry['runbot.build'].browse(cr, uid, [int(build_id)])[0]
+        res = super(RunbotController, self).toggle_label(build_id=build_id, label_id=label_id, search=search, **post)
+        if build_brw.team_id.name:
+            return werkzeug.utils.redirect('/runbot/team/%s' % build_brw.team_id.id)
+        else:
+            return res
+
