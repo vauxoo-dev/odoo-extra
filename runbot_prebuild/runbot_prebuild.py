@@ -211,6 +211,7 @@ class runbot_prebuild(osv.osv):
                 'line_ids': build_line_datas,
             }
             build_id = build_obj.create(cr, uid, build_info)
+            #ToDO: Add log
             build_ids.append( build_id )
         return build_ids
 
