@@ -180,7 +180,10 @@ class runbot_prebuild(osv.osv):
                 refs = repo_obj.get_ref_data(cr, uid, [prebuild_line.branch_id.repo_id.id], prebuild_line.branch_id.name, context=context)
                 if refs and refs[prebuild_line.repo_id.id]:
                     ref_data = refs[prebuild_line.repo_id.id][0]
-                    ref_data.update({'branch_id': prebuild_line.branch_id.id})
+                    ref_data.update({
+                        'branch_id': prebuild_line.branch_id.id,
+                        'prebuild_line_id': prebuild_line.id,
+                    })
                     build_line_datas.append( (0, 0, ref_data) )
 
             build_info = {
@@ -277,6 +280,8 @@ class runbot_build_line(osv.osv):
     _columns = {
         'build_id': fields.many2one('runbot.build', 'Build', required=True,
             ondelete='cascade', select=1),
+        'prebuild_line_id': fields.many2one('runbot.prebuild.branch', 'Prebuild Line', 
+            required=False, ondelete='set null', select=1),
         'branch_id': fields.many2one('runbot.branch', 'Branch', required=True,
             ondelete='cascade', select=1),
         'refname': fields.char('Ref Name'),
