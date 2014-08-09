@@ -145,6 +145,7 @@
                             <field name="subject"/>
                             <field name="committername"/>
                             <field name="prebuild_line_id"/>
+                            <field name="reason_ok"/>
                         </tree>
                         <form string="Build Lines">
                             <field name="branch_id"/>
@@ -155,6 +156,7 @@
                             <field name="subject"/>
                             <field name="committername"/>
                             <field name="prebuild_line_id"/>
+                            <field name="reason_ok"/>
                         </form>
                     </field>
                 </xpath>

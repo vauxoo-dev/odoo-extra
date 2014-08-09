@@ -132,10 +132,14 @@ class runbot_prebuild(osv.osv):
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
                         sha = ref_data['sha']
-                        build_line_with_sha_ids = build_line_pool.search(cr, uid, [('branch_id', '=', branch.id),('build_id', 'in', build_ids), ('sha', '=', sha)], context=context, limit=1)
+                        build_line_with_sha_ids = build_line_pool.search(cr, uid, [
+                            ('branch_id', '=', branch.id),('build_id', 'in', build_ids),
+                            ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
                             #If not last commit then create build with last commit
-                            build_new_id = self.create_build(cr, uid, [prebuild_id], context=context)
+                            local_context = context.copy()#local context for not affect global context
+                            local_context.update({'branch_reason_ids': [branch.id]})
+                            build_new_id = self.create_build(cr, uid, [prebuild_id], context=local_context)
                             build_new_ids.append( build_new_id )
         return build_new_ids
 
@@ -179,6 +183,7 @@ class runbot_prebuild(osv.osv):
     def create_build(self, cr, uid, ids, context=None):
         if context is None:
             context = {}
+        branch_reason_ids = context.get('branch_reason_ids', []) or []
         repo_obj = self.pool.get('runbot.repo')
         build_obj = self.pool.get('runbot.build')
         build_ids = []
@@ -195,11 +200,12 @@ class runbot_prebuild(osv.osv):
                     ref_data.update({
                         'branch_id': prebuild_line.branch_id.id,
                         'prebuild_line_id': prebuild_line.id,
+                        'reason_ok': prebuild_line.branch_id.id in branch_reason_ids,
                     })
                     build_line_datas.append( (0, 0, ref_data) )
 
             build_info = {
-                'branch_id': prebuild_line.branch_id.id,#Any branch. Not use it. Last of for.
+                'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use branch changed 
                 'name': prebuild.name,#TODO: Get this value
                 'author': prebuild.name,#TODO: Get this value
                 'subject': prebuild.name,#TODO: Get this value
@@ -307,6 +313,8 @@ class runbot_build_line(osv.osv):
         'repo_id': fields.related('branch_id', 'repo_id', type="many2one", \
             relation="runbot.repo", string="Repository", readonly=True, store=True, \
             ondelete='cascade', select=1),
+        'reason_ok': fields.boolean('Reason', help="This line is the reason of create" \
+             "the complete build.\nReason of PR or reason of new commit.", copy=False),
     }
 
 class runbot_repo(osv.osv):
