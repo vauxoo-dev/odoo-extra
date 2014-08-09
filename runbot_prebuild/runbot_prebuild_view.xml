@@ -11,6 +11,7 @@
                         <group>
                             <field name="branch_id"/>
                             <field name="check_pr"/>
+                            <field name="check_new_commit"/>
                             <field name="sha"/>
                             <field name="repo_id"/>
                         </group>
@@ -21,9 +22,10 @@
         <record id="view_prebuild_branch_tree" model="ir.ui.view">
             <field name="model">runbot.prebuild.branch</field>
             <field name="arch" type="xml">
-                <tree string="Pre-Builds">
+                <tree string="Pre-Builds" editable="bottom">
                     <field name="branch_id"/>
                     <field name="check_pr"/>
+                    <field name="check_new_commit"/>
                     <field name="sha"/>
                     <field name="repo_id"/>
                 </tree>

@@ -39,6 +39,9 @@ class runbot_prebuild_branch(osv.osv):
             ondelete='cascade', select=1),
         'check_pr': fields.boolean('Check PR',
             help='If is True, this will check Pull Request for this branch in this prebuild'),
+        'check_new_commit': fields.boolean('Check New Commit',
+            help='If is True, this will check new commit for this branch in this prebuild'\
+            ' and will make a new build.'),#ToDo: Use this feature.
         'sha': fields.char('SHA commit', size=40,
             help='Empty=Currently version\nSHA=Get this version in builds'),
         'prebuild_id': fields.many2one('runbot.prebuild', 'Pre-Build', required=True,
@@ -66,41 +69,47 @@ class runbot_prebuild(osv.osv):
 
     _columns = {
         'name': fields.char("Name", size=128, required=True),
-        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work'),
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
         'module_branch_ids': fields.one2many('runbot.prebuild.branch', 'prebuild_id',
             string='Branches of modules', copy=True,
             help="Community addons branches which need to run tests."),
         'sticky': fields.boolean('Sticky', select=1,
             help="If True: Stay alive a instance ever. And check PR to main branch and"\
             " modules branches for make pre-builds\nIf False: Stay alive a instance only"\
-            " moment and not check PR."),
+            " moment and not check PR.", copy=False),
         'modules': fields.char("Modules to Install", size=256,
-            help="Empty is all modules availables"),
+            help="Empty is all modules availables", copy=True),
         'modules_to_exclude': fields.char("Modules to exclude", size=256,
-            help="Empty is exclude none. Add modules is exclude this one. FEATURE TODO"),
+            help="Empty is exclude none. Add modules is exclude this one. FEATURE TODO", copy=True),
         'language': fields.char("Language of instance", size=5,
-            help="Language to change instance after of run test.\nFormat ll_CC<-language and country"),
+            help="Language to change instance after of run test.\nFormat ll_CC<-language and country", copy=True),
         'script_prebuild': fields.text('Script Pre-Build',
-            help="Script to execute before run build"),
+            help="Script to execute before run build", copy=True),
         'script_posbuild': fields.text('Script Pos-Build',
-            help="Script to execute after run build"),
-        'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', help="If this is a prebuild from PR this field is for set original prebuild"),
+            help="Script to execute after run build", copy=True),
+        'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', copy=True
+            help="If this is a prebuild from PR this field is for set original prebuild"),
+    }
+    
+    _defaults = {
+        'sticky': False,
     }
     #TODO: Add constraint that add prebuild_lines of least one main repo type
     #TODO: Add related to repo.type store=True
     
-    def get_prebuilds_with_new_commit(self, cr, uid, ids, context=None):
+    def create_prebuild_new_commit(self, cr, uid, ids, context=None):
         """
-        Create build of sticky build with changes in your branches
+        Create new build with changes in your branches with check_new_commit=True
         """
         build_pool = self.pool.get('runbot.build')
         build_line_pool = self.pool.get('runbot.build.line')
         repo_pool = self.pool.get('runbot.repo')
         branch_pool = self.pool.get('runbot.branch')
         build_new_ids = []
-        for prebuild_sticky_id in ids:
-            prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_sticky_id)], context=context)
-            build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', prebuild_child_ids + [prebuild_sticky_id])], context=context)
+        for prebuild_id in ids:
+            prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_id)], context=context)
+            build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', prebuild_child_ids + [prebuild_id])], context=context)
+            ###prebuild_line_id ('check_new_commit', '=', True)
             build_line_ids = build_line_pool.search(cr, uid, [('build_id', 'in', build_ids)], context=context)
             if build_line_ids:
                 #Get all branches from build_line of this prebuild_sticky
@@ -118,17 +127,19 @@ class runbot_prebuild(osv.osv):
                         build_line_with_sha_ids = build_line_pool.search(cr, uid, [('branch_id', '=', branch.id),('build_id', 'in', build_ids), ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
                             #If not last commit then create build with last commit
-                            build_new_id = self.create_build(cr, uid, [prebuild_sticky_id], context=context)
+                            build_new_id = self.create_build(cr, uid, [prebuild_id], context=context)
                             build_new_ids.append( build_new_id )
             else:
-                #If not build exists then create one
-                build_new_id = self.create_build(cr, uid, [prebuild_sticky_id], context=context)
-                build_new_ids.append( build_new_id )
+                #If not build exists then wait that normal process create it
+                # or probably check_new_commit=False for all build_lines
+                pass
+                #build_new_id = self.create_build(cr, uid, [prebuild_id], context=context)
+                #build_new_ids.append( build_new_id )
         return build_new_ids
 
     def create_prebuild_pr(self, cr, uid, ids, context=None):
         """
-        Create prebuild from pull request with branches pr_check=True and prebuild sticky=True
+        Create prebuild from pull request with branches check_pr=True
         """
         new_prebuild_ids = [ ]
         branch_pool = self.pool.get('runbot.branch')
@@ -317,10 +328,22 @@ class runbot_repo(osv.osv):
 
     def cron(self, cr, uid, ids=None, context=None):
         prebuild_pool = self.pool.get('runbot.prebuild')
-        prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
-        prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
-        build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
-        prebuild_pool.get_prebuilds_with_new_commit(cr, uid, prebuild_sticky_ids, context=context)
+        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+        
+        prebuild_line_check_pr_ids = prebuild_line_pool.search(cr, uid, [
+            ('check_pr', '=', True),
+            ('prebuild_id.sticky', '=', True),
+        ], context=context)
+        prebuild_line_check_pr_datas = prebuild_line_pool.read(cr, uid, 
+            prebuild_line_check_pr_ids, ['prebuild_id'], context=context)
+        #prebuild_check_pr = prebuild_line_check_pr_datas
+        #prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
+        
+        #prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
+
+        #build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
+        #prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
+        
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
