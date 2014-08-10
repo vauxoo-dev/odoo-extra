@@ -433,7 +433,7 @@ class runbot_repo(osv.osv):
     def reload_nginx(self, cr, uid, context=None):
         settings = {}
         settings['port'] = openerp.tools.config['xmlrpc_port']
-        nginx_dir = os.path.join(self.root(cr, uid), 'nginx')
+        nginx_dir = os.path.join(self.root(cr, uid), 'nginx', '/')
         settings['nginx_dir'] = nginx_dir
         ids = self.search(cr, uid, [('nginx','=',True)], order='id')
         if ids:
