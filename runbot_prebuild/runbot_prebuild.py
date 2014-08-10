@@ -476,7 +476,6 @@ class RunbotController(RunbotController):
 
     @http.route(['/runbot/build/<build_id>/force'], type='http', auth="public", website=True)
     def build_force(self, build_id, **post):
-        print 'post2', post
         registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
         res = super(RunbotController, self).build_force(build_id, **post)
         build_brw = registry['runbot.build'].browse(cr, uid, int(build_id))
