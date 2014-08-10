@@ -107,15 +107,12 @@ class runbot_prebuild(osv.osv):
         branch_pool = self.pool.get('runbot.branch')
         build_new_ids = []
         for prebuild_id in ids:
-            main_build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', [prebuild_id])], context=context)
-            if not main_build_ids:
+            build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', [prebuild_id])], context=context)
+            if not build_ids:
                 #If not build exists then create it
                 build_new_id = self.create_build(cr, uid, [prebuild_id], context=context)
                 build_new_ids.append( build_new_id )
                 continue
-            child_prebuild_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild_id)], context=context)
-            child_build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', child_prebuild_ids)], context=context)
-            build_ids = child_build_ids + main_build_ids
 
             build_line_ids = build_line_pool.search(cr, uid, [
                 ('build_id', 'in', build_ids),
@@ -137,7 +134,7 @@ class runbot_prebuild(osv.osv):
                             ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
                             #If not last commit then create build with last commit
-                            replace_branch_info = {branch.id: {'reason': True,}}
+                            replace_branch_info = {branch.id: {'reason_ok': True,}}
                             build_new_id = self.create_build(cr, uid, [prebuild_id], replace_branch_info=replace_branch_info, context=context)
                             build_new_ids.append( build_new_id )
         return build_new_ids
@@ -168,13 +165,10 @@ class runbot_prebuild(osv.osv):
                             continue
                         #If not exist build of this pr then create one
                         replace_branch_info = {prebuild_line.branch_id.id: {
-                            'branch_new_id': branch_pr.id, 
-                            'reason': True,
+                            'branch_id': branch_pr.id, 
+                            'reason_ok': True,
                         }}
                         new_name = prebuild.name + ' [' + branch_pr.complete_name + ']'
-                        default_build_data = {
-
-                        }
                         build_created_ids = self.create_build(cr, uid, [prebuild.id], 
                             default_data = {
                                 'branch_id': branch_pr.id,#Only for group by in qweb view
@@ -189,7 +183,7 @@ class runbot_prebuild(osv.osv):
         """
         Create a new build from a prebuild.
         @replace_branch_info: Get a dict data for replace a old branch for new one.
-            {branch_old_id: {'branch_new_id': integer, 'reason': boolean}}
+            {branch_old_id: {'branch_id': integer, 'reason_ok': boolean}}#build_line_data
         """
         if context is None:
             context = {}
@@ -210,17 +204,16 @@ class runbot_prebuild(osv.osv):
             build_line_datas = []
             for prebuild_line in prebuild.module_branch_ids:
                 new_branch_info = replace_branch_info.get(prebuild_line.branch_id.id, {}) or {}
-                branch_id = new_branch_info.get('branch_new_id', False) or prebuild_line.branch_id.id
-                reason = new_branch_info.get('reason', False) or False
+                branch_id = new_branch_info.get('branch_id', False) or prebuild_line.branch_id.id
                 branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
                 
                 refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
                 if refs and refs[branch.repo_id.id]:
                     ref_data = refs[branch.repo_id.id][0]
+                    ref_data.update( new_branch_info )
                     ref_data.update({
                         'branch_id': branch_id,
                         'prebuild_line_id': prebuild_line.id,
-                        'reason_ok': reason,
                     })
                     build_line_datas.append( (0, 0, ref_data) )
 
