@@ -137,55 +137,58 @@ class runbot_prebuild(osv.osv):
                             ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
                             #If not last commit then create build with last commit
-                            local_context = context.copy()#local context for not affect global context
-                            local_context.update({'branch_reason_ids': [branch.id]})
-                            build_new_id = self.create_build(cr, uid, [prebuild_id], context=local_context)
+                            replace_branch_info = {branch.id: {'reason': True,}}
+                            build_new_id = self.create_build(cr, uid, [prebuild_id], replace_branch_info=replace_branch_info, context=context)
                             build_new_ids.append( build_new_id )
         return build_new_ids
 
-    def create_prebuild_pr(self, cr, uid, ids, context=None):
+    def create_build_pr(self, cr, uid, ids, context=None):
         """
-        Create prebuild from pull request with branches check_pr=True
+        Create build from pull request with build line check_pr=True
         """
         new_prebuild_ids = [ ]
         branch_pool = self.pool.get('runbot.branch')
-        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+        #prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+        build_pool = self.pool.get('runbot.build')
+        build_line_pool = self.pool.get('runbot.build.line')
         for prebuild in self.browse(cr, uid, ids, context=context):
             for prebuild_line in prebuild.module_branch_ids:
                 if prebuild_line.check_pr:
                     branch_pr_ids = branch_pool.search(cr, uid, [('branch_base_id', '=', prebuild_line.branch_id.id)], context=context)
-                    #Get prebuild childs
-                    prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild.id)], context=context )
+                    #Get build of this prebuild
+                    #build_ids = build_pool.search(cr, uid, [('prebuild_id', '=', prebuild.id)], context=context)
+                    ####prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild.id)], context=context )
                     for branch_pr in branch_pool.browse(cr, uid, branch_pr_ids, context=context):
-                        prebuild_pr_ids = prebuild_line_pool.search(cr, uid, [('branch_id', '=', branch_pr.id), ('prebuild_id', 'in', prebuild_child_ids)], limit=1)
-                        if prebuild_pr_ids:
-                            #if exist prebuild of pr no create new one
+                        #prebuild_pr_ids = prebuild_line_pool.search(cr, uid, [('branch_id', '=', branch_pr.id), ('prebuild_id', 'in', prebuild_child_ids)], limit=1)
+                        build_line_pr_ids = build_line_pool.search(cr, uid, [
+                            ('branch_id', '=', branch_pr.id),
+                            ('build_id.prebuild_id', '=', prebuild.id)], context=context)
+                        if build_line_pr_ids:
+                            #if exist build of pr no create new one
                             continue
-                        #If not exist prebuild of this pr then create one
-                        new_prebuild_pr_id = self.copy(cr, uid, prebuild.id, {
-                            'name': prebuild.name + ' - ' + branch_pr.complete_name,
-                            'prebuild_parent_id': prebuild.id,
-                            'sticky': False,
-                        }, context=context)
-                        
-                        #Search prebuild lines for change old branch by new pr branch
-                        new_prebuild_line_ids = prebuild_line_pool.search(cr, uid, [
-                            ('prebuild_id', '=', new_prebuild_pr_id),
-                        ], context=context)
-                        for new_prebuild_line in prebuild_line_pool.browse(cr, uid, new_prebuild_line_ids, context):
-                            if new_prebuild_line.branch_id.id == prebuild_line.branch_id.id:
-                                #Replace branch base by branch pr in new pre-build
-                                prebuild_line_pool.write(cr, uid, [new_prebuild_line.id], 
-                                    {'branch_id': branch_pr.id}, context=context)
-                        new_prebuild_ids.append( new_prebuild_pr_id )
+                        #If not exist build of this pr then create one
+                        replace_branch_info = {prebuild_line.branch_id.id: {
+                            'branch_new_id': branch_pr.id, 
+                            'reason': True,
+                        }}
+                        new_build_id = self.create_build(cr, uid, [prebuild.id], replace_branch_info, context=context)
+                        new_prebuild_ids.append( new_build_id )
         return new_prebuild_ids
 
-    def create_build(self, cr, uid, ids, context=None):
+    def create_build(self, cr, uid, ids, replace_branch_info=None, context=None):
+        """
+        Create a new build from a prebuild.
+        @replace_branch_info: Get a dict data for replace a old branch for new one.
+            {branch_old_id: {'branch_new_id': integer, 'reason': boolean}}
+        """
         if context is None:
             context = {}
+        if replace_branch_info is None:
+            replace_branch_info = {}
         branch_reason_ids = context.get('branch_reason_ids', []) or []
         repo_obj = self.pool.get('runbot.repo')
         build_obj = self.pool.get('runbot.build')
+        branch_obj = self.pool.get('runbot.branch')
         build_ids = []
         for prebuild in self.browse(cr, uid, ids, context=context):
             #Update repository but no create default build
@@ -194,13 +197,18 @@ class runbot_prebuild(osv.osv):
             #Get build_line current info
             build_line_datas = []
             for prebuild_line in prebuild.module_branch_ids:
-                refs = repo_obj.get_ref_data(cr, uid, [prebuild_line.branch_id.repo_id.id], prebuild_line.branch_id.name, context=context)
-                if refs and refs[prebuild_line.repo_id.id]:
-                    ref_data = refs[prebuild_line.repo_id.id][0]
+                new_branch_info = replace_branch_info.get(prebuild_line.branch_id.id, {}) or {}
+                branch_id = new_branch_info.get('branch_new_id', False) or prebuild_line.branch_id.id
+                reason = new_branch_info.get('reason', False) or False
+                branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
+                
+                refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
+                if refs and refs[branch.repo_id.id]:
+                    ref_data = refs[branch.repo_id.id][0]
                     ref_data.update({
-                        'branch_id': prebuild_line.branch_id.id,
+                        'branch_id': branch_id,
                         'prebuild_line_id': prebuild_line.id,
-                        'reason_ok': prebuild_line.branch_id.id in branch_reason_ids,
+                        'reason_ok': reason,
                     })
                     build_line_datas.append( (0, 0, ref_data) )
 
@@ -343,15 +351,9 @@ class runbot_repo(osv.osv):
 
     def cron(self, cr, uid, ids=None, context=None):
         prebuild_pool = self.pool.get('runbot.prebuild')
-        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
-
         prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
-        
-        prebuild_pr_ids = prebuild_pool.create_prebuild_pr(cr, uid, prebuild_sticky_ids, context=context)
-        build_ids = prebuild_pool.create_build(cr, uid, prebuild_pr_ids, context=context)
-
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
-
+        prebuild_pr_ids = prebuild_pool.create_build_pr(cr, uid, prebuild_sticky_ids, context=context)
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
