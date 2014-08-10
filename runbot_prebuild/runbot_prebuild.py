@@ -146,7 +146,7 @@ class runbot_prebuild(osv.osv):
         """
         Create build from pull request with build line check_pr=True
         """
-        new_prebuild_ids = [ ]
+        new_build_ids = [ ]
         branch_pool = self.pool.get('runbot.branch')
         #prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
         build_pool = self.pool.get('runbot.build')
@@ -171,9 +171,13 @@ class runbot_prebuild(osv.osv):
                             'branch_new_id': branch_pr.id, 
                             'reason': True,
                         }}
-                        new_build_id = self.create_build(cr, uid, [prebuild.id], replace_branch_info, context=context)
-                        new_prebuild_ids.append( new_build_id )
-        return new_prebuild_ids
+                        build_created_ids = self.create_build(cr, uid, [prebuild.id], replace_branch_info, context=context)
+                        build_pool.write(cr, uid, build_created_ids, {
+                            'name': prebuild.name + ' [' + branch_pr.complete_name + ']',
+                            'branch_id': branch_pr.id,#Only for group by in qweb view
+                        }, context=context)
+                        new_build_ids.extend( build_created_ids )
+        return new_build_ids
 
     def create_build(self, cr, uid, ids, replace_branch_info=None, context=None):
         """
