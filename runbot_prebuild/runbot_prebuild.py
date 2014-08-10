@@ -171,15 +171,21 @@ class runbot_prebuild(osv.osv):
                             'branch_new_id': branch_pr.id, 
                             'reason': True,
                         }}
-                        build_created_ids = self.create_build(cr, uid, [prebuild.id], replace_branch_info, context=context)
-                        build_pool.write(cr, uid, build_created_ids, {
-                            'name': prebuild.name + ' [' + branch_pr.complete_name + ']',
-                            'branch_id': branch_pr.id,#Only for group by in qweb view
-                        }, context=context)
+                        new_name = prebuild.name + ' [' + branch_pr.complete_name + ']'
+                        default_build_data = {
+
+                        }
+                        build_created_ids = self.create_build(cr, uid, [prebuild.id], 
+                            default_data = {
+                                'branch_id': branch_pr.id,#Only for group by in qweb view
+                                'name': new_name,
+                                'author': new_name,#TODO: Get this value.
+                                'subject': new_name,#TODO: Get this value
+                            }, replace_branch_info=replace_branch_info, context=context)
                         new_build_ids.extend( build_created_ids )
         return new_build_ids
 
-    def create_build(self, cr, uid, ids, replace_branch_info=None, context=None):
+    def create_build(self, cr, uid, ids, default_data=None, replace_branch_info=None, context=None):
         """
         Create a new build from a prebuild.
         @replace_branch_info: Get a dict data for replace a old branch for new one.
@@ -189,6 +195,8 @@ class runbot_prebuild(osv.osv):
             context = {}
         if replace_branch_info is None:
             replace_branch_info = {}
+        if default_data is None:
+            default_data = {}
         branch_reason_ids = context.get('branch_reason_ids', []) or []
         repo_obj = self.pool.get('runbot.repo')
         build_obj = self.pool.get('runbot.build')
@@ -218,7 +226,7 @@ class runbot_prebuild(osv.osv):
 
             build_info = {
                 'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use branch changed 
-                'name': prebuild.name,#TODO: Get this value
+                'name': prebuild.name,
                 'author': prebuild.name,#TODO: Get this value
                 'subject': prebuild.name,#TODO: Get this value
                 'date': time.strftime("%Y-%m-%d %H:%M:%S"),#TODO: Get this value
@@ -227,6 +235,7 @@ class runbot_prebuild(osv.osv):
                 'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
                 'line_ids': build_line_datas,
             }
+            build_info.update( default_data or {} )
             build_id = build_obj.create(cr, uid, build_info)
             #ToDO: Add log
             build_ids.append( build_id )
