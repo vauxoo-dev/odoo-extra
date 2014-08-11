@@ -419,11 +419,12 @@ class RunbotController(RunbotController):
                             br.id AS branch_id,
                             bu.id AS build_id,
                             bu.branch_dependency_id AS branch_dependency_id,
+                            bu.prebuild_id AS prebuild_id,
                             row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
                         WHERE branch_id in %s
-                        GROUP BY br.id, branch_dependency_id, bu.id
+                        GROUP BY br.id, branch_dependency_id, prebuild_id, bu.id
                     ) AS br_bu
                     WHERE
                         row <= 4
