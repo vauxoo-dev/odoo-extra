@@ -135,6 +135,7 @@
                 <xpath expr="//field[@name='name']" position="after">
                     <field name="prebuild_id"/>
                     <field name="team_id"/>
+                    <field name="from_main_prebuild_ok"/>
                     <field name="line_ids">
                         <tree string="Build Lines">
                             <field name="branch_id"/>

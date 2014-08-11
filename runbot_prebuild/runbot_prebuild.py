@@ -70,7 +70,7 @@ class runbot_prebuild(osv.osv):
 
     _columns = {
         'name': fields.char("Name", size=128, required=True),
-        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True, required=True),
         'module_branch_ids': fields.one2many('runbot.prebuild.branch', 'prebuild_id',
             string='Branches of modules', copy=True,
             help="Community addons branches which need to run tests."),
@@ -110,8 +110,9 @@ class runbot_prebuild(osv.osv):
         for prebuild_id in ids:
             build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', [prebuild_id])], context=context)
             if not build_ids:
-                #If not build exists then create it
-                build_new_id = self.create_build(cr, uid, [prebuild_id], context=context)
+                #If not build exists then create it and mark as from_main_prebuild_ok=True
+                build_new_id = self.create_build(cr, uid, [prebuild_id], 
+                    default_data={'from_main_prebuild_ok': True}, context=context)
                 build_new_ids.append( build_new_id )
                 continue
 
@@ -256,6 +257,9 @@ class runbot_build(osv.osv):
     _inherit = "runbot.build"
 
     _columns = {
+        'from_main_prebuild_ok': fields.boolean('', copy=True, 
+            help="This build was created by a main prebuild?"\
+               "\nTrue: Then you will show at start on qweb"),
         'prebuild_id': fields.many2one('runbot.prebuild', string='Runbot Pre-Build',
             required=False, help="This is the origin of instance data.", copy=True),
         'line_ids': fields.one2many('runbot.build.line', 'build_id',
@@ -382,29 +386,28 @@ class RunbotController(RunbotController):
         res.qcontext.update({'teams':teams})
         if team:
             filters = {key: post.get(key, '1') for key in ['pending', 'testing', 'running', 'done']}
-            build_ids = build_obj.search(cr, uid, [('team_id', '=', team.id)], limit=int(limit))
+            #build_ids = build_obj.search(cr, uid, [('team_id', '=', team.id)], limit=int(limit))
             branch_ids, build_by_branch_ids = [], {}
 
-            if build_ids:
-                branch_query = """
-                    SELECT br.id AS branch_id,
+            if True:#build_ids:
+                branch_query = """SELECT br.id AS branch_id,
                         bu.branch_dependency_id,
-                        CASE WHEN br.sticky AND bu.branch_dependency_id IS NULL THEN True
+                        CASE WHEN (br.sticky AND bu.branch_dependency_id IS NULL)
+                                OR (from_main_prebuild_ok IS TRUE) THEN True
                              ELSE False
                         END AS real_sticky
                     FROM runbot_branch br
                     INNER JOIN runbot_build bu
                        ON br.id=bu.branch_id
-                    WHERE bu.id in %s
-                    ORDER BY real_sticky DESC, bu.sequence DESC--, br.id DESC, bu.branch_dependency_id DESC
+                    WHERE bu.team_id = %s 
+                    ORDER BY real_sticky DESC, bu.sequence DESC
+                    LIMIT %s
                 """
-                #sticky_dom = [('repo_id','=',repo.id), ('sticky', '=', True)]
-                #sticky_branch_ids = [] if search else branch_obj.search(cr, uid, sticky_dom)
-                cr.execute(branch_query, (tuple(build_ids),))
+                cr.execute(branch_query, (team.id, int(limit)))
                 branch_ids = uniq_list( [(br[0], br[1] or None) for br in cr.fetchall()] )
-
+                branch_ids_order = [branch_id[0] for branch_id in branch_ids]
                 build_query = """
-                    SELECT
+                     SELECT
                         branch_id,
                         branch_dependency_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
@@ -419,14 +422,15 @@ class RunbotController(RunbotController):
                             row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
-                        WHERE bu.id in %s
+                        WHERE branch_id in %s
                         GROUP BY br.id, branch_dependency_id, bu.id
                     ) AS br_bu
                     WHERE
                         row <= 4
                     GROUP BY br_bu.branch_id, br_bu.branch_dependency_id
+                    ORDER BY POSITION(branch_id::text in '(%s)') DESC
                 """
-                cr.execute(build_query, (tuple(build_ids),))
+                cr.execute(build_query, (tuple(branch_ids_order), tuple(branch_ids_order)))
                 build_by_branch_ids = {
                     (rec[0], rec[1]): [r for r in rec[2:] if r is not None] for rec in cr.fetchall()
                 }
