@@ -445,7 +445,7 @@ class RunbotController(RunbotController):
                 return {
                     'branch': branch,
                     'branch_dependency': branch_dependency,
-                    'prebuild_id': prebuild,
+                    'prebuild': prebuild,
                     'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[
                         branch.id, 
                         branch_dependency and branch_dependency.id or None,
