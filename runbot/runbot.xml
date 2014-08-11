@@ -579,8 +579,10 @@ worker_processes  1;
 events { worker_connections  1024; }
 http {
     include /etc/nginx/mime.types;
-    server_names_hash_max_size 512;
-    server_names_hash_bucket_size 256;
+    server_names_hash_max_size 1024;
+    server_names_hash_bucket_size 512;
+    types_hash_max_size 1024;
+    types_hash_bucket_size 64;
     index index.html;
     log_format full '$remote_addr - $remote_user [$time_local] '
                     '"$request" $status $body_bytes_sent '
