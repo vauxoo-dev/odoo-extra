@@ -108,7 +108,10 @@ class runbot_prebuild(osv.osv):
         branch_pool = self.pool.get('runbot.branch')
         build_new_ids = []
         for prebuild_id in ids:
-            build_ids = build_pool.search(cr, uid, [('prebuild_id', 'in', [prebuild_id])], context=context)
+            build_ids = build_pool.search(cr, uid, [
+                ('prebuild_id', 'in', [prebuild_id]),
+                ('from_main_prebuild_ok', '=', True),
+            ], context=context)
             if not build_ids:
                 #If not build exists then create it and mark as from_main_prebuild_ok=True
                 build_new_id = self.create_build(cr, uid, [prebuild_id], 
@@ -127,6 +130,7 @@ class runbot_prebuild(osv.osv):
 
                 #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
+                    _logger.info("get last commit info for check new commit")
                     refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
@@ -210,6 +214,7 @@ class runbot_prebuild(osv.osv):
                 branch_id = new_branch_info.get('branch_id', False) or prebuild_line.branch_id.id
                 branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
                 
+                _logger.info("get last commit info for create new build line")
                 refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
                 if refs and refs[branch.repo_id.id]:
                     ref_data = refs[branch.repo_id.id][0]
@@ -232,8 +237,8 @@ class runbot_prebuild(osv.osv):
                 'line_ids': build_line_datas,
             }
             build_info.update( default_data or {} )
+            _logger.info("Create new build from prebuild_id [%s] "%(prebuild.name) )
             build_id = build_obj.create(cr, uid, build_info)
-            #ToDO: Add log
             build_ids.append( build_id )
         return build_ids
 
