@@ -101,6 +101,7 @@
             <field name="arch" type="xml">
                 <tree string="Runbot Teams">
                     <field name="name"/>
+                    <field name="privacy_visibility"/>
                     <field name="description"/>
                 </tree>
             </field>
@@ -112,6 +113,7 @@
                     <sheet>
                         <group>
                             <field name="name"/>
+                            <field name="privacy_visibility"/>
                             <field name="description"/>
                         </group>
                     </sheet>
@@ -163,6 +165,16 @@
                 </xpath>
                 <xpath expr="//header/button[@name='reset']" position="after">
                     <button name="force_schedule" type="object" string="Force run build"/>
+                </xpath>
+            </field>
+        </record>
+        
+        <record id="view_repo_form_inh_team_01" model="ir.ui.view">
+            <field name="model">runbot.repo</field>
+            <field name="inherit_id" ref="runbot.view_repo_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='url']" position="after">
+                    <field name="team_id"/>
                 </xpath>
             </field>
         </record>
