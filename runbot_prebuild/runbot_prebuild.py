@@ -7,6 +7,8 @@ import logging
 import glob
 import time
 import werkzeug
+from collections import OrderedDict
+
 from openerp.addons.runbot.runbot import RunbotController
 import dateutil.parser
 from openerp.addons.runbot.runbot import uniq_list
@@ -426,7 +428,7 @@ class RunbotController(RunbotController):
                             bu.id AS build_id,
                             bu.branch_dependency_id AS branch_dependency_id,
                             bu.prebuild_id AS prebuild_id,
-                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id ORDER BY bu.id DESC) AS row
+                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id, bu.prebuild_id ORDER BY bu.id DESC) AS row
                         FROM
                             runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
                         WHERE branch_id in %s
@@ -435,36 +437,36 @@ class RunbotController(RunbotController):
                     WHERE
                         row <= 4
                     GROUP BY br_bu.branch_id, br_bu.branch_dependency_id, br_bu.prebuild_id
-                    ORDER BY POSITION(branch_id::text in '(%s)') DESC
+                    ORDER BY POSITION(branch_id::text in '(%s)')
                 """
                 cr.execute(build_query, (tuple(branch_ids_order), tuple(branch_ids_order)))
-                build_by_branch_ids = {
-                    (rec[0], rec[1], rec[2]): [r for r in rec[3:] if r is not None] for rec in cr.fetchall()
-                }
+                build_by_branch_ids = OrderedDict( [ ((rec[0], rec[1], rec[2]), [r for r in rec[3:] if r is not None]) for rec in cr.fetchall()] )
 
             #branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
-
             def branch_info(branch, branch_dependency, prebuild):
+                key = (
+                    branch.id,
+                    branch_dependency and branch_dependency.id or None,
+                    prebuild and prebuild.id or None,
+                )
                 return {
                     'branch': branch,
                     'branch_dependency': branch_dependency,
                     'prebuild': prebuild,
-                    'builds': [self.build_info(build_dict[build_id]) for build_id in build_by_branch_ids[
-                        branch.id, 
-                        branch_dependency and branch_dependency.id or None,
-                        prebuild and prebuild.id or None,
-                    ]]
+                    'builds': [self.build_info(build_dict[build_id]) for build_id\
+                               in build_by_branch_ids[ key ]
+                    ]
                 }
 
             res.qcontext.update({
                 'branches': [ branch_info(
-                                branch_obj.browse(cr, uid, [branch_id], context=request.context)[0],\
-                                branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0],\
-                                branch_obj.browse(cr, uid, [prebuild_id], context=request.context)[0],\
+                                branch_id and branch_obj.browse(cr, uid, [branch_id], context=request.context)[0] or None,\
+                                branch_dependency_id and branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0] or None,\
+                                prebuild_id and branch_obj.browse(cr, uid, [prebuild_id], context=request.context)[0] or None,\
                          ) \
-                         for branch_id, branch_dependency_id, prebuild_id in branch_ids ],
+                         for branch_id, branch_dependency_id, prebuild_id in build_by_branch_ids ],
                 'testing': build_obj.search_count(cr, uid, [('team_id','=',team.id), ('state','=','testing')]),
                 'team': team,
                 'running': build_obj.search_count(cr, uid, [('team_id','=',team.id), ('state','=','running')]),
