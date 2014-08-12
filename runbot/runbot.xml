@@ -152,6 +152,7 @@
                         <field name="name"/>
                         <field name="date"/>
                         <field name="author"/>
+                        <field name="committer"/>
                         <field name="subject"/>
                         <field name="port"/>
                         <field name="dest"/>
@@ -178,6 +179,7 @@
                 <field name="dest"/>
                 <field name="date"/>
                 <field name="author"/>
+                <field name="committer"/>
                 <field name="state"/>
                 <field name="port"/>
                 <field name="job"/>
@@ -254,12 +256,18 @@
     </record>
 
     <!-- Templates -->
+    <template id="assets_frontend" inherit_id="website.assets_frontend" name="runbot.assets.frontend">
+      <xpath expr="." position="inside">
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/octicons/2.0.2/octicons.css"/>
+      </xpath>
+    </template>
+
     <template id="runbot.build_name">
         <t t-if="bu['state']=='pending'"><i class="text-default fa fa-pause"/> pending</t>
-        <t t-if="bu['state']=='testing'"><i class="text-info fa fa-spinner"/> testing <t t-esc="bu['job']"/> <small><t t-esc="bu['job_time']"/></small></t>
-        <t t-if="bu['result']=='ok'"><i class="text-success fa fa-thumbs-up"/><small> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
-        <t t-if="bu['result']=='ko'"><i class="text-danger fa fa-thumbs-down"/><small> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
-        <t t-if="bu['result']=='warn'"><i class="text-warning fa fa-warning"/><small> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
+        <t t-if="bu['state']=='testing'"><i class="text-info fa fa-spinner"/> testing <t t-esc="bu['job']"/> <small t-if="not hide_time"><t t-esc="bu['job_time']"/></small></t>
+        <t t-if="bu['result']=='ok'"><i class="text-success fa fa-thumbs-up"/><small t-if="not hide_time"> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
+        <t t-if="bu['result']=='ko'"><i class="text-danger fa fa-thumbs-down"/><small t-if="not hide_time"> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
+        <t t-if="bu['result']=='warn'"><i class="text-warning fa fa-warning"/><small t-if="not hide_time"> age <t t-esc="bu['job_age']"/> time <t t-esc="bu['job_time']"/></small></t>
         <t t-if="bu['result']=='skipped'"><i class="text-danger fa fa-ban"/> skipped</t>
         <t t-if="bu['result']=='killed'"><i class="text-danger fa fa-times"/> killed</t>
     </template>
@@ -425,7 +433,11 @@
                                          <br/>
                                     </t>
                                    <t t-id="bu['author']">
-                                        <t t-esc="bu['author']"/><br/>
+                                        <t t-esc="bu['author']"/>
+                                        <t t-if="bu['committer'] and bu['author'] != bu['committer']" t-id="bu['committer']">
+                                            (<span class="octicon octicon-arrow-right"></span>&amp;nbsp;<t t-esc="bu['committer']"/>)
+                                        </t>
+                                        <br/>
                                     </t>
                                     <small><t t-esc="bu['dest']"/></small><br/>
                                     <t t-call="runbot.build_name"/>
@@ -459,7 +471,6 @@
                                 <t t-esc="build['dest']"/>
                                 <t t-call="runbot.build_name">
                                     <t t-set="bu" t-value="build"/>
-                                    <t t-set="klass" t-value="''"/>
                                 </t>
                               </a>
                             </div>
@@ -501,7 +512,13 @@
                                   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Other builds <b class="caret"></b></a>
                                   <ul class="dropdown-menu">
                                     <t t-foreach='other_builds' t-as='other_build'>
-                                        <li><a t-attf-href="/runbot/build/{{other_build.id}}"><t t-esc='other_build.dest'/></a></li>
+                                      <li><a t-attf-href="/runbot/build/{{other_build.id}}">
+                                        <t t-esc='other_build.dest'/>
+                                        <t t-call="runbot.build_name">
+                                          <t t-set="bu" t-value="other_build"/>
+                                          <t t-set="hide_time" t-value="True"></t>
+                                        </t>
+                                      </a></li>
                                     </t>
                                   </ul>
                                 </li>
@@ -518,6 +535,7 @@
                         <p>
                             Subject: <t t-esc="build['subject']"/><br/>
                             Author: <t t-esc="build['author']"/><br/>
+                            Committer: <t t-esc="build['committer']"/><br/>
                         </p>
                         <table class="table table-condensed table-striped">
                         <tr>
@@ -617,9 +635,9 @@ http {
 }
     </template>
 
-    <template id="runbot.badge_default">
-      <!-- from https://github.com/badges/shields/tree/master/templates -->
-      <svg xmlns="http://www.w3.org/2000/svg" t-attf-width="{{left.width + right.width}}" height="18">
+    <template id="runbot.badge_default">&lt;?xml version="1.0"?&gt;
+      <svg t-attf-xmlns="http://www.w3.org/2000/svg" t-attf-width="{{left.width + right.width}}" height="18">
+        <!-- from https://github.com/badges/shields/tree/master/templates -->
         <linearGradient id="smooth" x2="0" y2="100%">
           <stop offset="0"  stop-color="#fff" stop-opacity=".7"/>
           <stop offset=".1" stop-color="#aaa" stop-opacity=".1"/>
@@ -638,9 +656,9 @@ http {
         </g>
       </svg>
     </template>
-    <template id="runbot.badge_flat">
-      <!-- from https://github.com/badges/shields/tree/master/templates -->
-      <svg xmlns="http://www.w3.org/2000/svg" t-attf-width="{{left.width + right.width}}" height="20">
+    <template id="runbot.badge_flat">&lt;?xml version="1.0"?&gt;
+      <svg t-attf-xmlns="http://www.w3.org/2000/svg" t-attf-width="{{left.width + right.width}}" height="20">
+        <!-- from https://github.com/badges/shields/tree/master/templates -->
         <linearGradient id="smooth" x2="0" y2="100%">
           <stop offset="0"  stop-color="#fff" stop-opacity=".1"/>
           <stop offset=".1" stop-color="#fff" stop-opacity=".1"/>
