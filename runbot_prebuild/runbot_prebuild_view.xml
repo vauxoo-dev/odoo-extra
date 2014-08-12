@@ -38,7 +38,7 @@
             <field name="arch" type="xml">
                 <form string="Pre-Build" version="7.0">
                     <header>
-                        <button name="create_build" type="object" string="Create build"/>
+                        <button name="create_main_build" type="object" string="Create main build"/>
                     </header>
                     <sheet>
                         <group>

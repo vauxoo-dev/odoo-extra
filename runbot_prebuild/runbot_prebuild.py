@@ -188,6 +188,15 @@ class runbot_prebuild(osv.osv):
                         new_build_ids.extend( build_created_ids )
         return new_build_ids
 
+    def create_main_build(self, cr, uid, ids, context=None):
+        """
+        Use it for send default data when use button directly
+        """
+        default_data = {
+            'from_main_prebuild_ok': True,
+        }
+        return self.create_build(cr, uid, ids, default_data=default_data, context=context)
+
     def create_build(self, cr, uid, ids, default_data=None, replace_branch_info=None, context=None):
         """
         Create a new build from a prebuild.
