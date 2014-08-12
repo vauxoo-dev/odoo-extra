@@ -397,10 +397,9 @@
                         </tr>
                         <tr t-foreach="branches" t-as="br">
                             <td>
-                                <i t-if="br['branch'].sticky and not br['branch_dependency'].branch_url" class="fa fa-star"/>
+                                <i t-if="br['branch'].sticky and br['branch_dependency'] is not None" class="fa fa-star"/>
                                 <b t-esc="br['branch'].branch_name"/>
-
-                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].branch_url"/>
+                                <span t-if="br['branch_dependency'] is not None" t-esc="br['branch_dependency'] and br['branch_dependency'].branch_url"/>
 <!--                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].repo_id.owner"/>
                                 <span t-if="br['branch_dependency']">/</span>
                                 <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].repo_id.repo"/>
@@ -579,6 +578,7 @@ worker_processes  1;
 events { worker_connections  1024; }
 http {
     include /etc/nginx/mime.types;
+    #include /opt/local/etc/nginx/mime.types;#TODO: Set this file if exists on mac is other one
     server_names_hash_max_size 1024;
     server_names_hash_bucket_size 512;
     types_hash_max_size 1024;

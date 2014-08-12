@@ -449,7 +449,7 @@ class runbot_repo(osv.osv):
                 os.kill(pid, signal.SIGHUP)
             except Exception:
                 _logger.debug('start nginx')
-                run(['/usr/sbin/nginx', '-p', nginx_dir + os.sep, '-c', 'nginx.conf'])
+                run([openerp.tools.find_in_path("nginx"), '-p', os.path.join(nginx_dir, ''), '-c', 'nginx.conf'])
 
     def killall(self, cr, uid, ids=None, context=None):
         # kill switch

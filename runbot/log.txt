@@ -1,0 +1,1050 @@
+commit 8a754f6ec184960bafba5b7e529061a2c7cbb537
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Aug 7 18:07:05 2014 -0500
+
+    [REF][runbot_prebuild] Add check pull request IMP
+
+commit 65b7d128ac1ca5a21300d22c2156d9268d701718
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Aug 7 18:06:20 2014 -0500
+
+    [REF][runbot] Add fields repo_name and repo_owner from runbot.branch
+
+commit bd07b1deb64d9a1cf672462d06da6fa98dc022ea
+Merge: c98781c 0c02c80
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Aug 7 14:18:48 2014 -0500
+
+    Merge branch 'check_pr_depends_plus_prebuild' of github.com:Vauxoo/odoo-extra into runbot_pr_repo_plus_pr_prebuild
+
+commit c98781c9760ea4a5bbdf4347f7f39ad94e838587
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Aug 7 10:47:23 2014 -0500
+
+    [FIX][runbot_prebuild] Fix view branch from prebuild info
+
+commit 0c02c807a9d061dd38b540c69cc22c70811cd910
+Merge: 4e2c234 ae039fd
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Aug 7 00:05:02 2014 -0500
+
+    Merge branch 'master-ref_runbot-vauxoo' of github.com:Vauxoo/odoo-extra into check_pr_depends_plus_prebuild
+
+commit ae039fde3a977adf57386c928d30005dec50ea4f
+Author: josemoralesp <jose@vauxoo.com>
+Date:   Wed Aug 6 20:29:01 2014 -0500
+
+    [IMP] Added inheritance in website view to show the prebuild field
+
+commit b1708876c7e5d8233aa0caccfb86614e2db840b6
+Author: josemoralesp <jose@vauxoo.com>
+Date:   Wed Aug 6 20:28:26 2014 -0500
+
+    [IMP] Added inheritance about runbot controller to add 2 new objects to show their information in website
+
+commit 4e2c23485c745cabd39da9bf2b179b29af723a97
+Merge: fdb5a79 76991dc
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 15:58:23 2014 -0500
+
+    Merge branch 'master-check_pr_dependencies-vauxoo' of github.com:Vauxoo/odoo-extra into check_pr_depends_plus_prebuild
+
+commit 76991dc88ab481d8926d9f460617f27afca56a28
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 15:58:00 2014 -0500
+
+    [FIX][runbot] Syntasys error
+
+commit fdb5a796dea6c5f3271e2587a7bdb940a9ad68b1
+Merge: 946df0c f658f71
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 15:36:58 2014 -0500
+
+    Merge branch 'master-check_pr_dependencies-vauxoo' of github.com:Vauxoo/odoo-extra into check_pr_depends_plus_prebuild
+
+commit f658f712bb4931e5de42a2e20c73b7e2e0adbd87
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 15:36:31 2014 -0500
+
+    [FIX][runbot] Add validate for use github_status function only with host_driver==github
+
+commit 946df0c3b331d3e292ddd0cfe3476f7ba67b951f
+Merge: 6ea192f 3d0aa93
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 12:54:21 2014 -0500
+
+    [FIX][runbot] Fix merge conflicts
+
+commit 3d0aa932c88aa03cafb5c1eb79c934ca9ee0f346
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 12:51:51 2014 -0500
+
+    [FIX][runbot] Add validation prebuild exists
+
+commit 6ea192fce85d0aba09ea8b91edb502e1f041fb67
+Merge: 9d3bac2 daa8766
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Wed Aug 6 12:49:14 2014 -0500
+
+    [REF][runbot] Merge from master-ref_runbot-vauxoo with pre-builds
+
+commit 9d3bac2a272747cefd7ac5099f39a18b8f671ee4
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Aug 5 18:45:06 2014 -0500
+
+    [REF][runbot] Fix order by row and column
+
+commit 22e7532c09659c41f331ac7d8c968bf6f4e0ff2c
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Aug 5 17:11:56 2014 -0500
+
+    [FIX][runbot] Fix duplicate build. Add branch_dependency_id
+
+commit b2c2b977b2913b26fffd9ca992bbe5463f556f6b
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Aug 5 16:29:01 2014 -0500
+
+    [FIX][runbot] Fix order of builds into qweb view
+
+commit 75aa8bd2844580c8989c182acc4442e32e38ac1d
+Merge: 07c4e83 5bc8aa2
+Author: Moises Lopez - https://www.vauxoo.com/ <moylop260@vauxoo.com>
+Date:   Tue Aug 5 13:35:31 2014 -0500
+
+    Merge pull request #2 from Vauxoo/master-check_pr_dependencies-vauxoo-jose
+    
+    [REF][runbot] Add group by branch and branch_depend into builds
+
+commit 5bc8aa2e656b9a16c0f8429e8157b180a776d533
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Aug 5 13:28:43 2014 -0500
+
+    [FIX][runbot] Add group by branch,dependency in view web
+
+commit 6fde2bf1f38bef254ddc687bd9b28ab0b79662d4
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Aug 5 11:52:52 2014 -0500
+
+    [REF][runbot] Modify sql for group by dependency_id and branch_id in view. TODO: This is a backup commit. TODO: Process this group by
+
+commit 0d29c33760e5ea1981d7e0c9375011b41b7e17d1
+Author: josemoralesp <jose@vauxoo.com>
+Date:   Tue Aug 5 04:54:06 2014 -0500
+
+    [IMP] Modified the logic to send branches from controller, to separates the branch with external dependency
+
+commit 7fcea9c544c0b9d11e20839d93e320986433cfbe
+Author: josemoralesp <jose@vauxoo.com>
+Date:   Tue Aug 5 04:53:17 2014 -0500
+
+    [IMP] Added new column to show if a branch has a external dependency
+
+commit 07c4e83b2ea305cdeda05afaa89bf09ce349f504
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Mon Aug 4 20:24:43 2014 -0500
+
+    [REF][runbot] Create build from PR. TODO: Split from web view
+
+commit 2de83a5c432398587c9f7ba1bd2f72cc76dd76bd
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Mon Aug 4 00:12:10 2014 -0500
+
+    [FIX][runbot] Fix store get_branch_data. Ref def github with new fields. Add try-except for create branch
+
+commit ff0cfda78e19b0d70d47ef2f6bd8d451ab6b00f5
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Aug 3 22:05:48 2014 -0500
+
+    [FIX][runbot] Change new active field to correct view
+
+commit 31053bb87c3fcbd1898f5eab959006c0ddb423eb
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Aug 3 21:41:20 2014 -0500
+
+    [REF][runbot] Clean lines
+
+commit 816c247a09050c7aa76b5e3fc9d15f58c373482b
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Aug 3 20:11:59 2014 -0500
+
+    [REF][runbot] Add repo info from host
+
+commit ea2fd6da9a9d3781994828875637f06aa09f8a1d
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Aug 3 01:26:55 2014 -0500
+
+    [REF][runbot] Add regex for get repo and owner of url github repository
+
+commit b07de2e4e201e47f45c91bae1baa4f05d322b709
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sat Aug 2 04:20:29 2014 -0500
+
+    [REF][runbot] Add branch info to runbot.branch model
+
+commit daa8766f528a2f17bd37eb5a06d473227d5700ea
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Jul 29 16:51:51 2014 -0500
+
+    [REF][runbot_prebuild] Add prebuild parameter and add get_name to runbot.branch
+
+commit 3076c2ca08e83e2e52870236c50200e168f60810
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Tue Jul 29 16:48:05 2014 -0500
+
+    [REF][runbot] Add prebuild parameters and return build_new_ids
+
+commit c63879db364c94491bdcc0918870e3ce3f9b7a7c
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Mon Jul 28 18:34:37 2014 -0500
+
+    [REF][runbot_prebuild] Add button create build
+
+commit 24118019cb329b62a67e90abf591fffad0265aca
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Mon Jul 28 14:08:56 2014 -0500
+
+    [REF][runbot_prebuild] Add button create build
+
+commit 243eeff56eb6fc02438cc38d79960759ba6c801a
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Mon Jul 28 14:07:13 2014 -0500
+
+    [REF][runbot_prebuild] Add field prebuild to original view runbot.build
+
+commit 5b071ef899ba686ae4f5f7d28f9df5d091074883
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Jul 27 20:23:24 2014 -0500
+
+    [REF][runbot_prebuild] Add modules to test
+
+commit 1ea4e06d1ac76b6dfb0dac967b4c039768a92f55
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Jul 27 19:17:12 2014 -0500
+
+    [REF][runbot_prebuild] Remove sha_commit functionallity. Add TODO comment of this IMP.
+
+commit b6580cdb4c7616212b97de73d460912a642af202
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Jul 27 19:09:17 2014 -0500
+
+    [REF][runbot_prebuild] Add structure of directories in checkout
+
+commit a02bcae36b652e5f1882459453b764bdc476dd82
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Jul 27 15:54:59 2014 -0500
+
+    [ADD][runbot_prebuild] module for create runbot custom pre-builds
+
+commit dbd60c5f3f45f4052e3307aeca9f9be3e2b9d4d4
+Merge: d6931e4 8ef7b9d
+Author: odony <odo@openerp.com>
+Date:   Fri Jul 25 17:23:29 2014 +0200
+
+    Merge pull request #20 from bwrsandman/patch-1
+    
+    [MERGE] runbot: more robust detection of "Modules Loaded"
+
+commit d6931e45e1871962ca008d7590720df805fb3730
+Merge: 120cc7f 36177f1
+Author: odony <odo@openerp.com>
+Date:   Fri Jul 25 17:12:52 2014 +0200
+
+    Merge pull request #8 from bwrsandman/community-addons
+    
+    [MERGE] runbot: support for multiple repo dependencies
+    
+    - Also improved branch selection for dependencies
+    - Plus improved selection of modules to build
+
+commit 36177f1b2acb43e5063e124b2133081c888790f1
+Author: Sandy Carter <bwrsandman@gmail.com>
+Date:   Thu Jul 24 21:39:07 2014 -0400
+
+    Add hint_repos set to help find the common branch in cases whith many dependent repos
+
+commit 0a6dfedb7ebb539d8ef80aecba3400093f22fd80
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Thu Jul 24 13:39:15 2014 -0500
+
+    [REF][runbot] Add validation of module duplicate
+
+commit ff4bc494b4f4abe75a7a15302d66d28525570e98
+Author: Moises Lopez <moylop260@vauxoo.com>
+Date:   Sun Jul 20 23:30:41 2014 -0500
+
+    [REF][runbot] Fix find modules to test and add support to use one previously configured in the repository
+
+commit 779017551511f14d663a0accc036627ccaec408c
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Wed Jul 9 21:28:26 2014 -0400
+
+    Use git API to find base branch name for PRs when looking for common branch names in extra deps
+
+commit 7061e79cd08a37fd86594eb517a8e78dc90c28d8
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Fri Jun 27 20:49:43 2014 -0400
+
+    Add function to better find proper fallback branch
+
+commit f962a488e9d0d9fc17f83d4d3c43f82af32ae7e4
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Fri Jun 27 20:34:35 2014 -0400
+
+    Change fallback_id to many2many
+    
+    A Community addon can depend on more than just an odoo server, but other
+    addon repos
+    
+    Bump version
+    Add migration script
+    
+    Signed-off-by: Sandy Carter <sandy.carter@savoirfairelinux.com>
+
+commit e84aef07cf6c00981136ed69c9b01afc2c18a8b5
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Fri Jun 27 20:31:26 2014 -0400
+
+    Allow some builds to determine which modules to test
+    
+    OCA addon repos will only want to test modules at root
+    
+    Glob before retrieving dependencies and store in build object
+    
+    Signed-off-by: Sandy Carter <sandy.carter@savoirfairelinux.com>
+
+commit 12c76f7decf249e5a774f08f0c740fef402548a6
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Sat Jun 14 19:32:08 2014 -0400
+
+    Add runbot work files to gitignore
+
+commit 120cc7f42d42918fe8b697f46f18de179d8e2045
+Merge: 8f5d0d0 8565f23
+Author: odony <odo@openerp.com>
+Date:   Thu Jul 24 10:23:37 2014 +0200
+
+    Merge pull request #26 from odoo/master-two-quick-fixes-ged
+    
+    [IMP] runbot: save committer date at creation
+
+commit 8565f232dce47a2f2112978b4d5fc357f1384228
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jul 24 10:17:17 2014 +0200
+
+    [IMP] save committer date at creation
+    
+    also, add a create_date filter in the build search view.  It allows
+    interesting statistics to be displayed in the graph view.
+
+commit 8f5d0d07a04dcc3e06f8d9f812b216d2c6dc23c1
+Author: Olivier Dony <odo@openerp.com>
+Date:   Wed Jul 23 13:09:08 2014 +0200
+
+    [FIX] runbot: compatibility with 7.0 API
+
+commit f2724d928264860090989738435f675605b1f22e
+Merge: e1ef9d7 11f7fc8
+Author: odony <odo@openerp.com>
+Date:   Wed Jul 23 13:07:15 2014 +0200
+
+    Merge pull request #25 from odoo/master-fixes-and-optimizations-ged
+    
+    [FIX] runbot: fix build search, optimize query for main repo view, update github status for duplicate builds
+
+commit 11f7fc8230686c0e36e0b33dfbe730fb70a9d05e
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Wed Jul 23 12:13:53 2014 +0200
+
+    [FIX] notifies github when duplicate isn't pending
+    
+    when a duplicate build is created, it now check if it isn't pending.
+    If not, it properly notifies github.
+
+commit 5e35384e7c268f00efe10e177301bf1da89f254a
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Wed Jul 23 11:52:06 2014 +0200
+
+    [IMP] optimize the number of queries in controller
+    
+    now, it only does one query to get the ids of each builds,
+    instead of a query for each branch
+
+commit 5541161122a787ed1387048a0a67e12083044044
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 22 15:36:48 2014 +0200
+
+    [FIX] improves the search in runbot repo
+    
+    now, it searches by fields 'dest' and 'subject'.  Also, slightly
+    improves the logic behind the controller.  Oh, and also prevent a
+    crash when searching
+
+commit e1ef9d70f1048a05b4c4de7cf911cc14658fee84
+Merge: b747161 4702e60
+Author: odony <odo@openerp.com>
+Date:   Tue Jul 22 23:19:13 2014 +0200
+
+    Merge pull request #23 from bwrsandman/patch-3
+    
+    [FIX] runbot: nginx field name conflict fixed by renaming `nginx()` to `reload_nginx()`
+
+commit 4702e606f864d25a261cf389ecfae5e308f85a06
+Author: Sandy <bwrsandman@gmail.com>
+Date:   Tue Jul 15 14:34:45 2014 -0400
+
+    Fix nginx field-function ambiguity
+
+commit b74716108957484b5280696825be9b14b21d9ff1
+Author: Sandy Carter <bwrsandman@gmail.com>
+Date:   Wed Jun 25 05:53:09 2014 -0400
+
+    [FIX] runbot: use runbot.repo.domain() instead of hardcoded URL
+    
+    (the whole thing could possibly be replaced by web.base.url)
+
+commit e8c3028974cea27e7111eecd9ebc16ed62cbc1c9
+Author: Olivier Dony <odo@openerp.com>
+Date:   Tue Jul 22 16:52:11 2014 +0200
+
+    [IMP] runbot: add a few missing indexes
+
+commit 4704cf23b214ee732afd137787569b40d0d23a40
+Merge: 3d52756 d273dd1
+Author: odony <odo@openerp.com>
+Date:   Tue Jul 22 16:41:28 2014 +0200
+
+    Merge pull request #22 from bwrsandman/patch-2
+    
+    [IMP] runbot: support repo names with `.git` suffix when performing github API calls
+
+commit 3d527566b71c3995caed7916f6b90b341baa6b6e
+Merge: 0afaa40 c2e9d6c
+Author: odony <odo@openerp.com>
+Date:   Tue Jul 22 12:02:18 2014 +0200
+
+    Merge pull request #24 from odoo/master-linked-builds-ged
+    
+    
+    This branch introduce the notion of 'duplicate' builds and use it to reduce the load. Each repository can have a duplicate repository (needs to be explicitely set up) where it will look for possible duplicate builds. If duplicate builds are found, they are linked together and the result of the real one will be used to display data for the duplicate build.
+    
+    Also, the branch improve somewhat the style of the code, completely refactors the runbot.repo controller (it reduces by about half the number of sql requests done to display the repo page), add options to the runbot settings page (domain key), add a graph view for runbot builds, fixes a few bugs, and probably introduces some new bugs as well.
+
+commit c2e9d6c07841426d284952a242a100ac8ca46915
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 22 11:01:34 2014 +0200
+
+    [ADD] add a graph view for runbot builds
+
+commit 00420b5c094ef718d5af6b7d3257d2f48d55db82
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 18 17:17:44 2014 +0200
+
+    [IMP] various improvements
+
+commit 9b2cec12900cff9904aa7645639d9350b77bf6ab
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 18 16:43:31 2014 +0200
+
+    [IMP] add domain key to the runbot settings screen
+
+commit 1c29d02f19bc2c4041533247456757aab3714c2c
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 18 13:52:17 2014 +0200
+
+    [FIX] notifies github for duplicate builds
+
+commit 5cfd4cee68ad33e380af320f76160bda297f896d
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 18 13:33:56 2014 +0200
+
+    [IMP] improve behavior of skipped/forced builds
+
+commit 12f8c5d51af16a24f89983dd413cd4ef6f60381a
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 18 12:09:01 2014 +0200
+
+    [IMP] display duplicate builds
+
+commit 81517e29139b011ccdd39f652394057f2c294202
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jul 17 14:27:05 2014 +0200
+
+    [IMP] optimizations to runbot controller
+
+commit 630c96ef9de4da28f13901ceba0befcedae6d88b
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jul 17 11:14:31 2014 +0200
+
+    [IMP] code refactoring
+
+commit dd643e66210e36de199d7dbe066cf87aaa6fe774
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jul 17 09:57:43 2014 +0200
+
+    [IMP] rename 'v' in 'context'
+
+commit d08ff561f05ac65709f6c9aeec91346eaf58a9b7
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jul 17 09:56:48 2014 +0200
+
+    [IMP] ignore skipped when detecting duplicate
+
+commit 0b37c09128c9d3382fde74b768359d7d707d1780
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Wed Jul 16 16:50:03 2014 +0200
+
+    [IMP] allow detection of duplicate builds
+
+commit 3bc57d43ea0b49b7466aef8d98065f9ab76ae4ee
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Wed Jul 16 10:11:29 2014 +0200
+
+    [IMP] add starting port as configuration option
+
+commit d273dd1501ccb7e32b9f39f06bd613a60a589593
+Author: Sandy <bwrsandman@gmail.com>
+Date:   Tue Jul 15 11:11:59 2014 -0400
+
+    Support repo names with `.git` suffix
+    
+    Fixes #17
+
+commit 0afaa40858cc3c01a059a1224eb282e9ebe21ca8
+Author: odony <odo@openerp.com>
+Date:   Tue Jul 15 16:52:27 2014 +0200
+
+    [FIX] runbot: compatibility with v7
+
+commit 268dc87261968c409869a4eed09e138a8d836405
+Merge: c224b63 cb88aa7
+Author: odony <odo@openerp.com>
+Date:   Tue Jul 15 16:37:13 2014 +0200
+
+    Merge pull request #21 from odoo/master-other-improvements-ged
+    
+    [MERGE] runbot: share workers between repos + lint/improve docstrings and variable names
+
+commit cb88aa7970a1e5aeafba970bf448e1173e8aba7b
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 16:31:15 2014 +0200
+
+    [IMP] better code for list_jobs
+    
+    inspired by https://github.com/odoo/odoo-extra/pull/19
+
+commit ce7d3165867bf7b129f26fe024825e94b773615b
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 16:28:20 2014 +0200
+
+    [IMP] put the default timeout in runbot options
+    
+    instead of hardcoding it
+
+commit 0620583237e4f76071f2b391b25f598007f67c3f
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 14:38:36 2014 +0200
+
+    [IMP] throw exception when no toke is available
+
+commit 2ec11bf1ff18bac6ff54cf4120ffd4a3b3dd93de
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 13:33:25 2014 +0200
+
+    [IMP] improvements to runbot repo page
+
+commit 25731ae627f6e2e9c300976eb2e4cf2a9008d746
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 11:33:38 2014 +0200
+
+    [IMP] share the workers between repos
+
+commit 7d56d49ff3aa14f9f9f64f02d93bd320c0579622
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 10:55:35 2014 +0200
+
+    [IMP] display the nmbr of pending/running/testing
+    
+    display the total number (for the runbot) and the numbers by repo
+
+commit 3d4cb96bb061934e4b2d0df7e63ce80f99545552
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 15 10:19:04 2014 +0200
+
+    [IMP] xml improvement
+
+commit 402acd6d6453754e104a52b188586358ae360457
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Mon Jul 14 17:06:42 2014 +0200
+
+    [IMP] add a res_config to the runbot
+    
+    it can save/get two keys: default_workers and default_running_max
+
+commit 8ef7b9dd6d769607508252a4c5c2f8f0cf06c9f4
+Author: Sandy <bwrsandman@gmail.com>
+Date:   Mon Jul 14 18:01:12 2014 -0400
+
+    Be more forgiving in detecting Modules Loaded
+    
+    There is no problem yet, but this line is prone to future errors.
+    
+    This line catches all cases without having to pool the filesystem.
+
+commit e0f36580db53a628b8c7cba7e5386db92f2577b7
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Mon Jul 14 12:09:00 2014 +0200
+
+    [FIX] preparation for v8 (fix various issues)
+
+commit ab5b95a7a19437c648dc7d9b3d59a1524e455065
+Merge: c20572b c224b63
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Mon Jul 14 10:10:43 2014 +0200
+
+    [MERGE] merge from origin/master
+
+commit c224b63721954a771459387d4e6b09ca9b9fcd9c
+Merge: af1bf74 988218f
+Author: Christophe Simonis <KangOl@users.noreply.github.com>
+Date:   Tue Jul 8 13:55:28 2014 +0200
+
+    Merge pull request #15 from xmo-odoo/master
+    
+    Actual support for openerp -> odoo
+
+commit 988218f1e39adc5afa26c9b0bf08e79b4ee87471
+Author: xmo-odoo <xmo-odoo@users.noreply.github.com>
+Date:   Tue Jul 8 13:48:40 2014 +0200
+
+    [FIX] non-renamed branches path handling
+    
+    Is there *really* a need for them to keep working?
+
+commit 42a6ad4bf2c18d4b1e2bf0d4a5ad3c10c75c998d
+Author: Xavier Morel <xmo@openerp.com>
+Date:   Tue Jul 8 13:41:08 2014 +0200
+
+    [FIX] actual support for openerp -> odoo
+
+commit af1bf741728e576b99891a4209807f2c15962988
+Author: xmo-odoo <xmo-odoo@users.noreply.github.com>
+Date:   Tue Jul 8 12:18:45 2014 +0200
+
+    Compatibility with openerp -> odoo rename
+
+commit c20572b67a36ac1da556a9502401ed1860236ed4
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Sun Jul 6 16:31:20 2014 +0200
+
+    [IMP] change the kill timeout back to 30 min
+
+commit 946906fb13a40458e8bf7258fe0f33a0269ffc0c
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 21:16:15 2014 +0200
+
+    [FIX] correct a typo in variable name
+
+commit 1ec970ae665c58275af1b2882d7706a12af18332
+Merge: eea2ba7 15b2909
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 16:45:03 2014 +0200
+
+    [MERGE] merge from master
+
+commit 15b290973feb366f9f77a4db127ba92c4c73df88
+Merge: 0c1ca7a 307993f
+Author: odony <odo@openerp.com>
+Date:   Fri Jul 4 16:36:44 2014 +0200
+
+    Merge pull request #13 from odoo/master-build-order-fix-ged
+    
+    [FIX] makes sure the build order is FIFO
+
+commit 307993ff334100f5e507eb96dd2c56058bb19c6f
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 16:33:32 2014 +0200
+
+    [FIX] makes sure the build order is FIFO
+    
+    instead of LIFO (for csn...)
+
+commit eea2ba7f56f5c38ffaf421d678c651d11e7e0047
+Merge: 0c1ca7a d52853f
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 16:16:45 2014 +0200
+
+    [IMP] stylistic improvements
+    
+    easier to understand and to fix...
+
+commit 0c1ca7a647048f2c03e3ab6830f9541454f46699
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Fri Jul 4 15:29:39 2014 +0200
+
+    [FIX] keep `running` highest priority builds, not lowest oneswq
+
+commit 76272a0065ae4edc5c175094387258f0ac8cf02b
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Mon Jun 30 23:23:20 2014 +0200
+
+    runbot build log template typo
+
+commit ae4fa883678a16ab889473838943a411288636b6
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Sun Jun 29 18:33:39 2014 +0200
+
+    runbot fix gevent test
+
+commit 57229b6555cc15cc2bdfa941dd48d6274fc44095
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Sun Jun 29 17:47:00 2014 +0200
+
+    [FIX] dont run cron, improve log display
+    
+    Dont run cron while testing this was causing apiculture to be slow.
+
+commit 1ed6b3f6a5c2151068e89401af1e914271a736a6
+Merge: e0076f2 fb73048
+Author: odony <odo@openerp.com>
+Date:   Fri Jul 4 15:10:21 2014 +0200
+
+    Merge pull request #12 from odoo/master-improvements-ged
+    
+    [IMP] improvements to runbot scheduler
+
+commit fb73048ab4c5c57d7a44c22b9f7db198fe8e5bef
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 14:47:58 2014 +0200
+
+    [IMP] improve runbot scheduler algorithm
+    
+    Now it is very simple: it always builds sticky branch if any, otherwise
+    last pending job.
+
+commit bfb1a4aa1d4f1ef1c065b88e4e8712157e7b1b92
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 14:12:12 2014 +0200
+
+    [FIX] correctly skip builds when they get too old
+
+commit ac00f9e34c77a0b00aafa559789a81187487918d
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 13:51:14 2014 +0200
+
+    [FIX] make the 'rebuild' functionality work
+    
+    if it is a skipped build, it will be put back in pending state, with
+    a high sequence number.
+    
+    if it is a complete build, it will be duplicated
+
+commit 48a2a162e3f3c6523f98ef22484b8147f0d1c54e
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Fri Jul 4 12:05:10 2014 +0200
+
+    [IMP] skip builds when they will never be built
+    
+    this marks builds as 'skipped' if a newer build in the same branch
+    arrives, or if they are too old to be built anyway
+
+commit d52853f980a12bf717971e0c19e67148cde7518d
+Merge: 0b0161a e0076f2
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Tue Jul 1 09:58:16 2014 +0200
+
+    Merge remote-tracking branch 'origin/master' into master-runbot-improvements-ged
+
+commit 0b0161a475b879204f723c93f37c7c5cca6e9cdd
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jun 26 15:06:59 2014 +0200
+
+    [IMP] various code cleanups
+
+commit e0076f244830d76db703cb4ffb360d0567965d5a
+Author: Richard Mathot <rim@openerp.com>
+Date:   Fri Jun 27 13:57:07 2014 +0200
+
+    Import email plugins
+
+commit 4419b6a952d9c38c7e597eb154257d775890bf32
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jun 26 14:36:03 2014 +0200
+
+    [IMP] various code cleanups in runbot.py
+
+commit 066fd9174562e5fd5d42b4f5706d6a938454e1a7
+Author: Gery Debongnie <gery.debongnie@gmail.com>
+Date:   Thu Jun 26 11:07:15 2014 +0200
+
+    [IMP] various code improvements in runbot
+
+commit f180ac6caf9d4401c3a54d23fe2a9a412b9fb2ff
+Merge: cc32652 1111e09
+Author: antonylesuisse <antonylesuisse@users.noreply.github.com>
+Date:   Wed Jun 25 10:45:35 2014 +0200
+
+    Merge pull request #6 from bwrsandman/same_python
+    
+    Spawn openerp using same python executable
+
+commit cc32652c1ecbf4327f9ac3d82f38fdb867766b8e
+Merge: 17ba57f 6f60474
+Author: antonylesuisse <antonylesuisse@users.noreply.github.com>
+Date:   Wed Jun 25 10:43:59 2014 +0200
+
+    Merge pull request #7 from bwrsandman/fix_empty_filter
+    
+    Fix server error when viewing runbot page with no repos
+
+commit 6f6047480653ad28a0d75a78e5bb59cb2fcc3c29
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Fri Jun 13 15:40:52 2014 -0400
+
+    Fix server error when viewing runbot page with no repos
+    
+    Only display filters when there are repos
+    Only display search when there are repos
+
+commit 17ba57fe4573acadb532a6e2df1d0cf300f864c0
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Tue Jun 24 15:58:11 2014 +0200
+
+    [FIX] runbot: differential kill and terminate
+
+commit eafc1dc6bbc8730a054408a76ba9e6379c390d8b
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Tue Jun 24 12:45:01 2014 +0200
+
+    [FIX] runbot: give more life to builds
+
+commit e162b692e5d3aed65655a5334120893071902e22
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Tue Jun 24 12:43:22 2014 +0200
+
+    [IMP] runbot: update github status at build birth and death
+
+commit 54cf6aaefba647cc03d5ddfdbaf4ee868d470ee3
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Tue Jun 24 12:26:39 2014 +0200
+
+    [FIX] runbot: correct build killing
+
+commit 2002ff610487ab43d14b318cb78a8d067acea7f7
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Fri Jun 20 16:26:15 2014 +0200
+
+    [IMP] runbot: nginx log_format: log request times
+
+commit 860f71283cec58f9d120edf49f9754fa3061b460
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Thu Jun 19 14:42:38 2014 +0200
+
+    [IMP] runbot: better design for killed builds
+
+commit ef8be7717bffba442fd6adee87363a02d6f7f963
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Thu Jun 19 14:12:04 2014 +0200
+
+    [IMP] runbot: mark killed builds as "killed"
+
+commit a050b1b57c67f10ac99bfdbe9c5f2da3c1117176
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Wed Jun 18 23:35:14 2014 +0200
+
+    [FIX] runbot: working late is never a good idea...
+
+commit 3fe2f768361846bb2a98cd2946d4ac023c0b7b00
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Wed Jun 18 23:28:34 2014 +0200
+
+    [FIX] runbot: set type when logging jobs
+
+commit 7779df6a360c4e2b1da778ff0d96f96e689ef47e
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Wed Jun 18 23:23:51 2014 +0200
+
+    [IMP] runbot: jobs logs when they starts
+
+commit 0b9c0e8713c0e4bd0adfd078c7a9371b5e874627
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Wed Jun 18 17:14:59 2014 +0200
+
+    [IMP] do not install gengo on runbot because it is not configured and will raise warning
+
+commit c749882cf37d5a9a5776aa2f34c74d8d9b51957e
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 16:21:02 2014 +0200
+
+    change parameter name to what it actually does
+
+commit dfb17f6c330f008e28561f6a43d1f6fe02cb9028
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 16:19:11 2014 +0200
+
+    [FIX] default build result is empty to match in domains result != 'somethind'
+
+commit bef87ed0f424bd3f09a5c69d5a07b40e10cf1cf4
+Author: Christophe Simonis <KangOl@users.noreply.github.com>
+Date:   Tue Jun 17 14:49:18 2014 +0200
+
+    Matching with better regex
+
+commit e36f04973c6420cad73ae0d4a19b681856d8a3f7
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 14:23:36 2014 +0200
+
+    Update also view labels to toggle labels
+
+commit abf1d14866e343547054199a65fd1def86fa92e1
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 14:22:46 2014 +0200
+
+    Do not compute badge for skipped and display warning badge
+
+commit dea869273a9a03f6f58993c3fa558a916cb8e4a5
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 14:15:36 2014 +0200
+
+    Avoid getting broken pipe errors in logs
+
+commit 9501499eb1b4af2125e2cbdfa7f685e31ade5f51
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 12:49:35 2014 +0200
+
+    [FIX] or condition was wrong, put text in orange
+
+commit e51aa1bc51f666130808022a2b3856a406c75f3e
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 12:38:38 2014 +0200
+
+    [ADD] warning levels in tests
+
+commit 556851acbe9435ee9a6d6089a54b4fa3babcb4d7
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Tue Jun 17 12:33:01 2014 +0200
+
+    update labels to new definition
+
+commit 0089022ea483840ded686b2acf279856404e4c42
+Author: Olivier Dony <odo@openerp.com>
+Date:   Mon Jun 16 12:08:06 2014 +0200
+
+    [IMP] runbot: show build time in human-readable format
+
+commit 1111e0983d5bc33ab3ab9e9ae91a19d0c6c5f1af
+Author: Sandy Carter <sandy.carter@savoirfairelinux.com>
+Date:   Fri Jun 13 14:13:11 2014 -0400
+
+    Spawn openerp using same python executable
+    
+    Solves issues of spawning wrong version of python or popping out of virtualenv
+
+commit 1e18646c8efacd4958c1f774397e5b6c9891ab0b
+Merge: 6f663ae aefe42c
+Author: odony <odo@openerp.com>
+Date:   Fri Jun 13 17:12:05 2014 +0200
+
+    Merge pull request #3 from bwrsandman/patch-1
+    
+    Specify additional python dependency
+
+commit 6f663aec862f2e4ca217375aa79c693080537d2d
+Author: Olivier Dony <odo@openerp.com>
+Date:   Fri Jun 13 09:50:32 2014 +0200
+
+    [IMP] runbot: allow manually marking a build as skipped, should probably be done automatically or something
+
+commit aefe42c808bd42021c141d358c8a24c2cb2aa549
+Author: Sandy <bwrsandman@gmail.com>
+Date:   Thu Jun 12 14:47:33 2014 -0400
+
+    Specify additional python dependency
+    
+    Include matplotlib introduced in 32aecb13
+
+commit 32aecb13ccb9695447dd1c78bc5427bed827879d
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Thu Jun 12 12:28:27 2014 +0200
+
+    [FIX] runbot: badges: Tkinter require a X server. use matplotlib to compute text width
+
+commit 16a865ce44850da90fff2ef67dc0b9e3cd165486
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Thu Jun 12 11:08:31 2014 +0200
+
+    [IMP] runbot: badge is now directly rendered via a qweb template instead of depending on shields.io service
+
+commit 5f334ff73d0df662d159a70a7f1ea2f8bd449810
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Wed Jun 11 00:05:41 2014 +0200
+
+    [FIX] runbot: correct badge route
+
+commit a5fd08afa634cbfdb42954f21d1d4f3818cf6754
+Author: Christophe Simonis <chs@odoo.com>
+Date:   Tue Jun 10 15:59:14 2014 +0200
+
+    [ADD] runbot: add badge route
+
+commit 3df315ab8a51627e0c7c593780cb00406540fc11
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Tue Jun 3 22:40:41 2014 +0200
+
+    fix rollback when killing
+
+commit 35b49868d48fc0cd4152398f6378758dcca21606
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Thu May 29 04:46:36 2014 +0200
+
+    killpg to kill all workers, rebuild only on last build
+
+commit 3146490aaa69e2b6b9ebf89c5f31f38c0268e475
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Wed May 28 16:28:32 2014 +0200
+
+    label id is an int, not a string
+
+commit 4366a9f02727a97caac35b667b54dfe7d90956d5
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Wed May 28 15:47:36 2014 +0200
+
+    better display of build
+
+commit f8a5fb645646d17385519f0270a24ef58f6b8003
+Author: Martin Trigaux <mat@openerp.com>
+Date:   Wed May 28 15:43:35 2014 +0200
+
+    [ADD] toggle labels on the runbot
+
+commit a5327457bd04c3d88c5cf7dc584fde0f687d933f
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Wed May 28 14:27:30 2014 +0200
+
+    Order the build events oldest first and add author and commit information when rebuilding
+
+commit f7aad2309a67f7f00d53331e8cc308abe90b6e6f
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Wed May 28 01:02:02 2014 +0200
+
+    runbot add author and subject support
+
+commit fc20d75ec964496dea0897a720e26f400b47abc8
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Tue May 27 02:17:39 2014 +0200
+
+    runbot change build url to use id
+
+commit 534ede0381e592d4b8e2d98c3bcdf62e8ba7eb2c
+Author: Antony Lesuisse <al@openerp.com>
+Date:   Tue May 27 01:59:22 2014 +0200
+
+    runbot fixes
+    - rebuild create a new build
+    - test pull head instead of merge
+    - move commit status to a function, to add support for pending
+
+commit 422d167775e099c1cea92f886dbcec0ba00860d3
+Author: Antony Lesuisse <lesuisse@gmail.com>
+Date:   Mon May 26 01:56:21 2014 +0200
+
+    bzr import runbot and document_fs
