@@ -377,10 +377,18 @@ class runbot_repo(osv.osv):
         return res
 
     def cron(self, cr, uid, ids=None, context=None):
+        if context is None:
+            context = {}
         prebuild_pool = self.pool.get('runbot.prebuild')
+        build_pool = self.pool.get('runbot.build')
         prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
         prebuild_pr_ids = prebuild_pool.create_build_pr(cr, uid, prebuild_sticky_ids, context=context)
+
+        #Get build_ids with prebuild_id set it. And assign in context for use it in scheduler function
+        builds_from_prebuild_ids = build_pool.search(cr, uid, [('prebuild_id', '<>', False)], context=context)
+        context['build_ids'] = builds_from_prebuild_ids
+
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
 class RunbotController(RunbotController):
