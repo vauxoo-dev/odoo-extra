@@ -991,6 +991,7 @@ class runbot_build(osv.osv):
 
     def schedule(self, cr, uid, ids, context=None):
         jobs = self.list_jobs()
+        print '='*120, jobs
         icp = self.pool['ir.config_parameter']
         timeout = int(icp.get_param(cr, uid, 'runbot.timeout', default=1800))
 
@@ -1011,12 +1012,14 @@ class runbot_build(osv.osv):
                 # check if current job is finished
                 lock_path = build.path('logs', '%s.lock' % build.job)
                 if locked(lock_path):
+                    print '/'*120, build.name
                     # kill if overpassed
                     if build.job != jobs[-1] and build.job_time > timeout:
                         build.logger('%s time exceded (%ss)', build.job, build.job_time)
                         build.kill()
                     continue
                 build.logger('%s finished', build.job)
+                print 'termino el jooooooooooooooooooooooooooooooooooooooooooooooooooooooob'
                 # schedule
                 v = {}
                 # testing -> running
@@ -1031,6 +1034,7 @@ class runbot_build(osv.osv):
                 # testing
                 else:
                     v['job'] = jobs[jobs.index(build.job) + 1]
+                print 'v'*120, v
                 build.write(v)
             build.refresh()
 
