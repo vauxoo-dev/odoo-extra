@@ -439,8 +439,9 @@ class RunbotController(RunbotController):
                     INNER JOIN runbot_branch br
                        ON br.id = group_vw.branch_id
                     ORDER BY bu1.from_main_prebuild_ok DESC, br.sticky DESC, group_vw.prebuild_id ASC, group_vw.branch_dependency_id ASC, bu1.id DESC
+                    LIMIT %s
                 """
-                cr.execute(build_query, (team.id,))
+                cr.execute(build_query, (team.id, int(limit)))
                 build_by_branch_ids = OrderedDict( [ ((rec[0], rec[1], rec[2]), [r for r in rec[3:] if r is not None]) for rec in cr.fetchall()] )
 
             build_ids = flatten(build_by_branch_ids.values())
