@@ -414,52 +414,35 @@ class RunbotController(RunbotController):
             branch_ids, build_by_branch_ids = [], {}
 
             if True:#build_ids:
-                branch_query = """SELECT br.id AS branch_id,
-                        bu.branch_dependency_id, bu.prebuild_id,
-                        CASE WHEN (br.sticky AND bu.branch_dependency_id IS NULL)
-                                OR (from_main_prebuild_ok IS TRUE) THEN True
-                             ELSE False
-                        END AS real_sticky
-                    FROM runbot_branch br
-                    INNER JOIN runbot_build bu
-                       ON br.id=bu.branch_id
-                    WHERE bu.team_id = %s 
-                    ORDER BY real_sticky DESC, bu.sequence DESC
-                    LIMIT %s
-                """
-                cr.execute(branch_query, (team.id, int(limit)))
-                branch_ids = uniq_list( [(br[0], br[1] or None, br[2] or None) for br in cr.fetchall()] )
-                branch_ids_order = [branch_id[0] for branch_id in branch_ids]
-                build_query = """
-                     SELECT
-                        branch_id,
-                        branch_dependency_id,
-                        prebuild_id,
-                        max(case when br_bu.row = 1 then br_bu.build_id end),
-                        max(case when br_bu.row = 2 then br_bu.build_id end),
-                        max(case when br_bu.row = 3 then br_bu.build_id end),
-                        max(case when br_bu.row = 4 then br_bu.build_id end)
+                build_query = """SELECT group_vw.*
                     FROM (
-                        SELECT
-                            br.id AS branch_id,
-                            bu.id AS build_id,
-                            bu.branch_dependency_id AS branch_dependency_id,
-                            bu.prebuild_id AS prebuild_id,
-                            row_number() OVER (PARTITION BY branch_id, bu.branch_dependency_id, bu.prebuild_id ORDER BY bu.id DESC) AS row
-                        FROM
-                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
-                        WHERE branch_id in %s
-                        GROUP BY br.id, branch_dependency_id, prebuild_id, bu.id
-                    ) AS br_bu
-                    WHERE
-                        row <= 4
-                    GROUP BY br_bu.branch_id, br_bu.branch_dependency_id, br_bu.prebuild_id
-                    ORDER BY POSITION(branch_id::text in '(%s)')
+                        SELECT bu_row.branch_id, bu_row.branch_dependency_id, bu_row.prebuild_id, 
+                            max(case when bu_row.row_number = 1 then bu_row.build_id end) AS build1,
+                            max(case when bu_row.row_number = 2 then bu_row.build_id end) AS build2,
+                            max(case when bu_row.row_number = 3 then bu_row.build_id end) AS build3,
+                            max(case when bu_row.row_number = 4 then bu_row.build_id end) AS build4
+                        FROM (
+                            SELECT bu.prebuild_id, bu.branch_id, bu.branch_dependency_id,
+                                row_number() OVER(
+                                        PARTITION BY bu.prebuild_id, bu.branch_id, bu.branch_dependency_id
+                                        ORDER BY bu.sequence DESC, bu.id DESC
+                                         ) AS row_number,
+                                bu.id AS build_id
+                            FROM runbot_build bu
+                            WHERE team_id = %s
+                        ) bu_row
+                        WHERE bu_row.row_number <= 4
+                        GROUP BY bu_row.prebuild_id, bu_row.branch_id, bu_row.branch_dependency_id
+                    ) group_vw
+                    INNER JOIN runbot_build bu1
+                       ON bu1.id = build1
+                    INNER JOIN runbot_branch br
+                       ON br.id = group_vw.branch_id
+                    ORDER BY bu1.from_main_prebuild_ok DESC, br.sticky DESC, group_vw.prebuild_id ASC, group_vw.branch_dependency_id ASC, bu1.id DESC
                 """
-                cr.execute(build_query, (tuple(branch_ids_order), tuple(branch_ids_order)))
+                cr.execute(build_query, (team.id,))
                 build_by_branch_ids = OrderedDict( [ ((rec[0], rec[1], rec[2]), [r for r in rec[3:] if r is not None]) for rec in cr.fetchall()] )
 
-            #branches = branch_obj.browse(cr, uid, branch_ids, context=request.context)
             build_ids = flatten(build_by_branch_ids.values())
             build_dict = {build.id: build for build in build_obj.browse(cr, uid, build_ids, context=request.context) }
             def branch_info(branch, branch_dependency, prebuild):
