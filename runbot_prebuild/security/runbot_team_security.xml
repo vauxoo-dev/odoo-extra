@@ -78,5 +78,13 @@
         <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_public'))]"/>
     </record>
     
+    <record id="base.group_portal" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_runbot_public'))]"/>
+    </record>
+    
+    <record id="base.group_public" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_runbot_public'))]"/>
+    </record>
+    
 </data>
 </openerp>
