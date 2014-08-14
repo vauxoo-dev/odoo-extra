@@ -82,8 +82,6 @@ class runbot_prebuild(osv.osv):
             help="Empty is all modules availables", copy=True),
         'modules_to_exclude': fields.char("Modules to exclude", size=256,
             help="Empty is exclude none. Add modules is exclude this one. FEATURE TODO", copy=True),
-        'language': fields.char("Language of instance", size=5,
-            help="Language to change instance after of run test.\nFormat ll_CC<-language and country", copy=True),
         'script_prebuild': fields.text('Script Pre-Build',
             help="Script to execute before run build", copy=True),
         'script_posbuild': fields.text('Script Pos-Build',
