@@ -1,0 +1,28 @@
+div.reasonok {
+    background-color:#D9EDF7;
+}
+div.prebuilds {
+    border-color: black;
+    border: 1px solid;
+}
+td.default {
+    padding: 1px !important
+
+}
+td.danger {
+    padding: 1px !important
+
+}
+
+td.success {
+    padding: 1px !important
+
+}
+td.warning {
+    padding: 1px !important
+
+}
+td.killed {
+    padding: 1px !important
+
+}
