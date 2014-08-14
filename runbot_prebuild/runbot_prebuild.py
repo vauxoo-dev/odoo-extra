@@ -93,7 +93,7 @@ class runbot_prebuild(osv.osv):
         'prebuild_parent_id': fields.many2one('runbot.prebuild', 'Parent Prebuild', copy=True,
             help="If this is a prebuild from PR this field is for set original prebuild"),
     }
-    
+
     _defaults = {
         'sticky': False,
     }
@@ -116,7 +116,7 @@ class runbot_prebuild(osv.osv):
             ], context=context)
             if not build_ids:
                 #If not build exists then create it and mark as from_main_prebuild_ok=True
-                build_new_id = self.create_build(cr, uid, [prebuild_id], 
+                build_new_id = self.create_build(cr, uid, [prebuild_id],
                     default_data={'from_main_prebuild_ok': True}, context=context)
                 build_new_ids.append( build_new_id )
                 continue
@@ -174,11 +174,11 @@ class runbot_prebuild(osv.osv):
 
                         #If not exist build of this pr then create one
                         replace_branch_info = {prebuild_line.branch_id.id: {
-                            'branch_id': branch_pr.id, 
+                            'branch_id': branch_pr.id,
                             'reason_ok': True,
                         }}
                         new_name = prebuild.name + ' [' + branch_pr.complete_name + ']'
-                        build_created_ids = self.create_build(cr, uid, [prebuild.id], 
+                        build_created_ids = self.create_build(cr, uid, [prebuild.id],
                             default_data = {
                                 'branch_id': branch_pr.id,#Only for group by in qweb view
                                 'name': new_name,
@@ -224,7 +224,7 @@ class runbot_prebuild(osv.osv):
                 new_branch_info = replace_branch_info.get(prebuild_line.branch_id.id, {}) or {}
                 branch_id = new_branch_info.get('branch_id', False) or prebuild_line.branch_id.id
                 branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
-                
+
                 _logger.info("get last commit info for create new build line")
                 refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
                 if refs and refs[branch.repo_id.id]:
@@ -237,7 +237,7 @@ class runbot_prebuild(osv.osv):
                     build_line_datas.append( (0, 0, ref_data) )
 
             build_info = {
-                'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use branch changed 
+                'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use branch changed
                 'name': prebuild.name,
                 'author': prebuild.name,#TODO: Get this value
                 'subject': prebuild.name,#TODO: Get this value
@@ -273,7 +273,7 @@ class runbot_build(osv.osv):
     _inherit = "runbot.build"
 
     _columns = {
-        'from_main_prebuild_ok': fields.boolean('', copy=True, 
+        'from_main_prebuild_ok': fields.boolean('', copy=True,
             help="This build was created by a main prebuild?"\
                "\nTrue: Then you will show at start on qweb"),
         'prebuild_id': fields.many2one('runbot.prebuild', string='Runbot Pre-Build',
@@ -331,10 +331,23 @@ class runbot_build_line(osv.osv):
     _name = 'runbot.build.line'
     _rec_name = 'sha'
 
+    def _get_url_commit(self, cr, uid, ids, fields, name, args, context=None):
+        context = context or {}
+        res = {}
+        for line in self.browse(cr, uid, ids, context=context):
+            repo = line.repo_id
+            if repo.host_driver == 'github':
+                url = repo.url+'/commit/'+line.sha
+            elif repo.host_driver == 'bitbucket':
+                url = repo.url+'/commits/'+line.sha
+            res[line.id] = url
+
+        return res
+
     _columns = {
         'build_id': fields.many2one('runbot.build', 'Build', required=True,
             ondelete='cascade', select=1),
-        'prebuild_line_id': fields.many2one('runbot.prebuild.branch', 'Prebuild Line', 
+        'prebuild_line_id': fields.many2one('runbot.prebuild.branch', 'Prebuild Line',
             required=False, ondelete='set null', select=1),
         'branch_id': fields.many2one('runbot.branch', 'Branch', required=True,
             ondelete='cascade', select=1),
@@ -343,6 +356,7 @@ class runbot_build_line(osv.osv):
             help='Version of commit or sha', required=True),
         'date': fields.datetime('Commit date'),
         'author': fields.char('Author'),
+        'commit_url': fields.function(_get_url_commit, string='Commit URL', type='char', help='URL of last commit for this branch'),
         'subject': fields.text('Subject'),
         'committername': fields.char('Committer'),
         'repo_id': fields.related('branch_id', 'repo_id', type="many2one", \
@@ -416,7 +430,7 @@ class RunbotController(RunbotController):
             if True:#build_ids:
                 build_query = """SELECT group_vw.*
                     FROM (
-                        SELECT bu_row.branch_id, bu_row.branch_dependency_id, bu_row.prebuild_id, 
+                        SELECT bu_row.branch_id, bu_row.branch_dependency_id, bu_row.prebuild_id,
                             max(case when bu_row.row_number = 1 then bu_row.build_id end) AS build1,
                             max(case when bu_row.row_number = 2 then bu_row.build_id end) AS build2,
                             max(case when bu_row.row_number = 3 then bu_row.build_id end) AS build3,
