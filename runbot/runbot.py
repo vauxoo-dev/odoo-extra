@@ -583,7 +583,7 @@ class runbot_build(osv.osv):
 
         return cmd, modules
 
-    def spawn(self, cmd, lock_path, log_path, cpu_limit=None, shell=False, showstderr=False):
+    def spawn(self, cmd, lock_path, log_path, cpu_limit=None, shell=False, showstderr=False, env=None):
         def preexec_fn():
             os.setsid()
             if cpu_limit:
@@ -597,11 +597,13 @@ class runbot_build(osv.osv):
             lock(lock_path)
         out=open(log_path,"w")
         _logger.debug("spawn: %s stdout: %s", ' '.join(cmd), log_path)
+        if env is None:
+            env = {}
         if showstderr:
             stderr = out
         else:
             stderr = open(os.devnull, 'w')
-        p=subprocess.Popen(cmd, stdout=out, stderr=stderr, preexec_fn=preexec_fn, shell=shell)
+        p=subprocess.Popen(cmd, stdout=out, stderr=stderr, preexec_fn=preexec_fn, shell=shell, env=env)
         return p.pid
 
     def github_status(self, cr, uid, ids, context=None):
