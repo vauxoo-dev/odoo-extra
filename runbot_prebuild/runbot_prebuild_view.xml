@@ -48,7 +48,6 @@
                             <field name="team_id"/>
                             <field name="modules"/>
                             <!--<field name="modules_to_exclude"/>-->
-                            <field name="language"/>
                             <field name="script_prebuild"/>
                             <field name="script_posbuild"/>
                         </group>
@@ -65,7 +64,6 @@
                     <field name="sticky"/>
                     <field name="modules"/>
                     <!--<field name="modules_to_exclude"/>-->
-                    <field name="language"/>
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>
                 </tree>
@@ -79,7 +77,6 @@
                     <field name="sticky"/>
                     <field name="modules"/>
                     <field name="modules_to_exclude"/>
-                    <field name="language"/>
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>
                 </search>
