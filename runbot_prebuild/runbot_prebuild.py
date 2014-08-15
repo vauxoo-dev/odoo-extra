@@ -97,6 +97,23 @@ class runbot_prebuild(osv.osv):
     }
     #TODO: Add constraint that add prebuild_lines of least one main repo type
     #TODO: Add related to repo.type store=True
+    
+    def get_builds_prebuild(self, cr, uid, ids, context=None):
+        '''
+        Method to get the builds that have been generated with this prebuild
+        '''
+        if context is None:
+            context = {}
+        build_obj = self.pool.get('runbot.build')
+        build_ids = build_obj.search(cr, uid, [('prebuild_id', 'in', ids)], context=context)
+        return {
+            'name': 'Prebuild Origin',
+            'res_model': 'runbot.build',
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'type': 'ir.actions.act_window',
+            'domain': [('id', 'in', build_ids)],
+        }
 
     def create_prebuild_new_commit(self, cr, uid, ids, context=None):
         """
@@ -371,6 +388,47 @@ class runbot_repo(osv.osv):
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
         prebuild_pr_ids = prebuild_pool.create_build_pr(cr, uid, prebuild_sticky_ids, context=context)
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
+        
+    def get_branch_repo(self, cr, uid, ids, context=None):
+        '''
+        Method to get the branches that have assigned the repo
+        '''
+        if context is None:
+            context = {}
+        branch_obj = self.pool.get('runbot.branch')
+        branch_ids = branch_obj.search(cr, uid, [('repo_id', 'in', ids)], context=context)
+        return {
+            'name': 'Branch Repo',
+            'res_model': 'runbot.branch',
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'type': 'ir.actions.act_window',
+            'domain': [('id', 'in', branch_ids)],
+        }
+        
+    def get_prebuild_repo(self, cr, uid, ids, context=None):
+        '''
+        Method to get the runbot prebuilds that have assigned the repo in yours lines
+        '''
+        if context is None:
+            context = {}
+        branch_obj = self.pool.get('runbot.branch')
+        prebuild_bra_obj = self.pool.get('runbot.prebuild.branch')
+        branch_ids = branch_obj.search(cr, uid, [('repo_id', 'in', ids)], context=context)
+        pre_bra_ids = prebuild_bra_obj.search(cr, uid, [('branch_id', 'in', branch_ids)])
+        prebuild_ids = []
+        for pre_bra in prebuild_bra_obj.browse(cr, uid, pre_bra_ids, context=context):
+            if pre_bra.prebuild_id and pre_bra.prebuild_id.id:
+                prebuild_ids.append(pre_bra.prebuild_id.id)
+        prebuild_ids = list(set(prebuild_ids))
+        return {
+            'name': 'Prebuild Repo',
+            'res_model': 'runbot.prebuild',
+            'view_type': 'form',
+            'view_mode': 'tree,form',
+            'type': 'ir.actions.act_window',
+            'domain': [('id', 'in', prebuild_ids)],
+        }
 
 class RunbotController(RunbotController):
 

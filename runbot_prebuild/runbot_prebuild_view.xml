@@ -39,6 +39,7 @@
                 <form string="Pre-Build" version="7.0">
                     <header>
                         <button name="create_build" type="object" string="Create build"/>
+                        <button name="get_builds_prebuild" string="Builds" type="object"/>
                     </header>
                     <sheet>
                         <group>
@@ -166,6 +167,27 @@
                 </xpath>
             </field>
         </record>
+        <record id="view_build_tree_inh_prebuild_01" model="ir.ui.view">
+            <field name="model">runbot.build</field>
+            <field name="inherit_id" ref="runbot.view_build_tree"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="prebuild_id"/>
+                </xpath>
+            </field>
+        </record>
+        <record id="view_build_search_inh_prebuild_01" model="ir.ui.view">
+            <field name="model">runbot.build</field>
+            <field name="inherit_id" ref="runbot.view_build_search"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='state']" position="after">
+                    <field name="prebuild_id"/>
+                </xpath>
+                <xpath expr="//filter[@string='Status']" position="after">
+                    <filter string="Prebuild" domain="[]" context="{'group_by':'prebuild_id'}"/>
+                </xpath>
+            </field>
+        </record>
 
     <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
         <xpath expr="//t[@t-if='repo']/ul/li/a" position="replace">
@@ -202,5 +224,32 @@
         </xpath>
     </template>
 
+    <record id="view_branch_search_inh_repository" model="ir.ui.view">
+        <field name="model">runbot.branch</field>
+        <field name="inherit_id" ref="runbot.view_branch_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="repo_id" filter_domain="[('repo_id.name','ilike',self),]"/>
+                <field name="branch_base_id" filter_domain="[('branch_base_id.name','ilike',self),]"/>
+            </xpath>
+            <xpath expr="//filter[@string='Owner']" position="after">
+                <filter string="Branch Base" domain="[]" context="{'group_by':'branch_base_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_repo_form_inh_button_branch" model="ir.ui.view">
+        <field name="model">runbot.repo</field>
+        <field name="inherit_id" ref="runbot.view_repo_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="get_branch_repo" string="Branches" type="object"/>
+                    <button name="get_prebuild_repo" string="Prebuilds" type="object"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+    
     </data>
 </openerp>
