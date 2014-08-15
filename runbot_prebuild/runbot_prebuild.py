@@ -65,6 +65,8 @@ class runbot_team(osv.Model):
     _columns = {
         'name': fields.char('Name', help='Name of the team'),
         'description': fields.text('Desciption', help='A little description of the team'),
+        'privacy_visibility': fields.selection(
+            [('public', 'Public'), ('private', 'Private')], 'Privacy Visibility'),
     }
 
 class runbot_prebuild(osv.osv):
@@ -366,6 +368,10 @@ class runbot_build_line(osv.osv):
 
 class runbot_repo(osv.osv):
     _inherit = "runbot.repo"
+    
+    _columns = {
+        'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
+    }
 
     def get_ref_data(self, cr, uid, ids, ref, context=None):
         res = {}

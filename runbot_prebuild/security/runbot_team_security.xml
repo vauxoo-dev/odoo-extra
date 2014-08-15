@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data noupdate="0">
+    
+    <record id="group_runbot_private" model="res.groups">
+        <field name="name">Runbot Private</field>
+        <field name="comment">This user will see all the teams</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
+        <field name="users" eval="[(4, ref('base.user_root'))]"/>
+    </record>
+
+    <record id="private_runbot_team" model="ir.rule">
+        <field name="name">Private runbot team</field>
+        <field name="model_id" ref="model_runbot_team"/>
+        <field name="domain_force">[('privacy_visibility','=','private')]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_private'))]"/>
+    </record>
+    
+    <record id="public_runbot_team" model="ir.rule">
+        <field name="name">Public runbot team</field>
+        <field name="model_id" ref="model_runbot_team"/>
+        <field name="domain_force">[('privacy_visibility','=','public')]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
+    </record>
+    
+    <record id="private_runbot_prebuild_team" model="ir.rule">
+        <field name="name">Private runbot prebuild team</field>
+        <field name="model_id" ref="model_runbot_prebuild"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','private')]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_private'))]"/>
+    </record>
+    
+    <record id="public_runbot_prebuild_team" model="ir.rule">
+        <field name="name">Public runbot prebuild team</field>
+        <field name="model_id" ref="model_runbot_prebuild"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','public')]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
+    </record>
+    
+    <record id="private_runbot_build_team" model="ir.rule">
+        <field name="name">Private runbot build team</field>
+        <field name="model_id" ref="model_runbot_build"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','private')]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_private'))]"/>
+    </record>
+    
+    <record id="public_runbot_build_team" model="ir.rule">
+        <field name="name">Public runbot build team</field>
+        <field name="model_id" ref="model_runbot_build"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','public')]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
+    </record>
+    
+    <record id="private_runbot_repo" model="ir.rule">
+        <field name="name">Private runbot repo</field>
+        <field name="model_id" ref="model_runbot_repo"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','private')]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_private'))]"/>
+    </record>
+    
+    <record id="public_runbot_repo" model="ir.rule">
+        <field name="name">Public runbot repo</field>
+        <field name="model_id" ref="model_runbot_repo"/>
+        <field name="domain_force">[('team_id.privacy_visibility','=','public')]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
+    </record>
+    
+</data>
+</openerp>
