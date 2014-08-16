@@ -416,8 +416,23 @@ class runbot_repo(osv.osv):
             context = {}
         prebuild_pool = self.pool.get('runbot.prebuild')
         build_pool = self.pool.get('runbot.build')
+        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+
         prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
+
+        #Search repo used into prebuild from sticky build (and check pr or check new commit) to update
+        prebuild_line_sticky_ids = prebuild_line_pool.search(cr, uid, [
+                '&', ('prebuild_id', 'in', prebuild_sticky_ids),
+                '|', ('check_pr', '=', True),
+                ('check_new_commit', '=', True),
+            ], context=context)
+        prebuild_line_datas = prebuild_line_pool.read(cr, uid, prebuild_line_sticky_ids, ['repo_id'], context=context)
+        repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
+        self.update(cr, uid, repo_ids, context=context)
+
+        #create build from prebuild of new commit
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
+        #create build from prebuild of pr
         prebuild_pr_ids = prebuild_pool.create_build_pr(cr, uid, prebuild_sticky_ids, context=context)
 
         #Get build_ids with prebuild_id set it. And assign in context for use it in scheduler function
@@ -425,7 +440,7 @@ class runbot_repo(osv.osv):
         context['build_ids'] = builds_from_prebuild_ids
 
         return super(runbot_repo, self).cron(cr, uid, ids, context=context)
-        
+
     def get_branch_repo(self, cr, uid, ids, context=None):
         '''
         Method to get the branches that have assigned the repo
