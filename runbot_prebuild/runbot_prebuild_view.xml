@@ -188,6 +188,16 @@
             </field>
         </record>
 
+        <record id="view_repo_form_inh_team_01" model="ir.ui.view">
+            <field name="model">runbot.repo</field>
+            <field name="inherit_id" ref="runbot.view_repo_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='url']" position="after">
+                    <field name="team_id"/>
+                </xpath>
+            </field>
+        </record>
+
     <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
         <xpath expr="//t[@t-set='head']" position="inside">
                 <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
