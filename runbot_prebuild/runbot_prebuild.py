@@ -349,16 +349,26 @@ class runbot_build_line(osv.osv):
     _rec_name = 'sha'
 
     def _get_url_commit(self, cr, uid, ids, fields, name, args, context=None):
-        context = context or {}
+        if not context:
+            context = {}
         res = {}
         for line in self.browse(cr, uid, ids, context=context):
             repo = line.repo_id
+            url = False
             if repo.host_driver == 'github':
                 url = repo.url+'/commit/'+line.sha
             elif repo.host_driver == 'bitbucket':
                 url = repo.url+'/commits/'+line.sha
             res[line.id] = url
+        return res
 
+    def _get_short_commit(self, cr, uid, ids, fields, name, args, context=None):
+        if not context:
+            context = {}
+        res = {}
+        for prebuild_line in self.browse(cr, uid, ids, context=context):
+            res[ prebuild_line.id ] = len(prebuild_line.sha) > 7 and \
+                prebuild_line.sha[:7] or prebuild_line.sha
         return res
 
     _columns = {
@@ -381,6 +391,8 @@ class runbot_build_line(osv.osv):
             ondelete='cascade', select=1),
         'reason_ok': fields.boolean('Reason', help="This line is the reason of create" \
              "the complete build.\nReason of PR or reason of new commit.", copy=False),
+        'short_sha': fields.function(_get_short_commit, string='Short Commit', type='char',
+            help='Sha short commit. Last 7 chars'),
     }
 
 class runbot_repo(osv.osv):
