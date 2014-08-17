@@ -22,16 +22,38 @@ from openerp import tools
 
 _logger = logging.getLogger(__name__)
 
-def mkdirs(dirs):
+def mkdirs(dirs):#Copy original function from addons/runbot/runbot.py. TODO: import function
     for d in dirs:
         if not os.path.exists(d):
             os.makedirs(d)
 
-def decode_utf(field):
+def decode_utf(field):#Copy original function from addons/runbot/runbot.py TODO: import function
     try:
         return field.decode('utf-8')
     except UnicodeDecodeError:
         return ''
+def log(*l, **kw):#Copy original function from addons/runbot/runbot.py. TODO: import function
+    out = [i if isinstance(i, basestring) else repr(i) for i in l] + \
+          ["%s=%r" % (k, v) for k, v in kw.items()]
+    _logger.debug(' '.join(out))
+
+def run(l, env=None):#Copy original function from addons/runbot/runbot.py TODO: import function
+    """Run a command described by l in environment env"""
+    log("run", l)
+    env = dict(os.environ, **env) if env else None
+    if isinstance(l, list):
+        if env:
+            rc = os.spawnvpe(os.P_WAIT, l[0], l, env)
+        else:
+            rc = os.spawnvp(os.P_WAIT, l[0], l)
+    elif isinstance(l, str):
+        tmp = ['sh', '-c', l]
+        if env:
+            rc = os.spawnvpe(os.P_WAIT, tmp[0], tmp, env)
+        else:
+            rc = os.spawnvp(os.P_WAIT, tmp[0], tmp)
+    log("run", rc=rc)
+    return rc
 
 REFS_FETCH_DEFAULT = ['+refs/heads/*:refs/heads/*', '+refs/pull/*/head:refs/pull/*']
 REFS_GET_DATA = ['refs/heads', 'refs/pull']
@@ -425,7 +447,7 @@ class runbot_repo(osv.osv):
                             branch_ids.append( branch_id )
                         except:
                             #cron is executed for a ir.cron or button. This make create from different cursor.
-                            #This make a error of unique branch name
+                            #This make a error of unique branch name in same repo_id
                             pass
         return branch_ids
 
@@ -456,24 +478,36 @@ class runbot_repo(osv.osv):
     def fetch_git(self, cr, uid, ids, refs=REFS_FETCH_DEFAULT, context=None):
         if context is None:
             context = {}
+        clone_only = context.get('clone_only', False)
+        repo_updated_ids = []
         for repo in self.browse(cr, uid, ids, context=context):
             _logger.debug('repo %s fetch branches', repo.name)
             if not os.path.isdir(os.path.join(repo.path)):
                 os.makedirs(repo.path)
             if not os.path.isdir(os.path.join(repo.path, 'refs')):
+                #repo.git(['clone', '--bare', repo.name])#TODO: Get clone with this function
                 run(['git', 'clone', '--bare', repo.name, repo.path])
+                repo_updated_ids.append(repo.id)
             else:
-                for ref in refs:
-                    repo.git(['fetch', '-p', 'origin', ref])
+                if not clone_only:
+                    for ref in refs:
+                        repo.git(['fetch', '-p', 'origin', ref])
+                        repo_updated_ids.append(repo.id)
+        return repo_updated_ids
 
     def update(self, cr, uid, ids, context=None):
         #All active repo get last version and new branches
+        if context is None:
+            context = {}
         all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
-        self.fetch_git(cr, uid, all_repo_ids, context=context)#TODO: IMP only fetch when path not exists or repo from prebuild.sticky=True or repo.auto=True
-        self.create_branches(cr, uid, all_repo_ids, context=context)
+
+        context2 = context.copy()
+        context2.update({'clone_only': True})
+        repo_updated_ids = self.fetch_git(cr, uid, all_repo_ids, context=context2)
+        new_branch_ids = self.create_branches(cr, uid, repo_updated_ids, context=context)
         
         #create build from prebuild configuration
-        self.create_build_from_prebuild(cr, uid, ids, context=context)
+        self.create_build_from_prebuild(cr, uid, None, context=context)
         
         #Continue with normal process
         return super(runbot_repo, self).update(cr, uid, ids, context=context)
@@ -497,7 +531,7 @@ class runbot_repo(osv.osv):
         repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
 
         #fetch repo
-        #self.fetch_git(cr, uid, repo_ids, context=context)#Make a fetch before of this function
+        self.fetch_git(cr, uid, repo_ids, context=context)
 
         #create build from prebuild of new commit
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
