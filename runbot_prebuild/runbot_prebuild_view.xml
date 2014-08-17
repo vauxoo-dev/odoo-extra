@@ -48,6 +48,8 @@
                             <field name="sticky"/>
                             <field name="team_id"/>
                             <field name="modules"/>
+                            <field name="lang"/>
+                            <field name="pylint_config"/>
                             <!--<field name="modules_to_exclude"/>-->
                             <field name="script_prebuild"/>
                             <field name="script_posbuild"/>
@@ -64,6 +66,8 @@
                     <field name="module_branch_ids"/>
                     <field name="sticky"/>
                     <field name="modules"/>
+                    <field name="lang"/>
+                    <field name="pylint_config"/>
                     <!--<field name="modules_to_exclude"/>-->
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>
@@ -77,6 +81,8 @@
                     <field name="name"/>
                     <field name="sticky"/>
                     <field name="modules"/>
+                    <field name="lang"/>
+                    <field name="pylint_config"/>
                     <field name="modules_to_exclude"/>
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>

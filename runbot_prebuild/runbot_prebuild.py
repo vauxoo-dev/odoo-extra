@@ -18,6 +18,7 @@ from openerp import http
 from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 from openerp import SUPERUSER_ID
+from openerp import tools
 
 _logger = logging.getLogger(__name__)
 
@@ -84,6 +85,9 @@ class runbot_prebuild(osv.osv):
             " moment and not check PR.", copy=False),
         'modules': fields.char("Modules to Install", size=256,
             help="Empty is all modules availables", copy=True),
+        'lang': fields.selection(tools.scan_languages(), 'Language', help='Language to change '
+                                 'instance after of run test.', copy=True),
+        'pylint_config': fields.many2one('pylint.conf', string='Pylint Config'),
         'modules_to_exclude': fields.char("Modules to exclude", size=256,
             help="Empty is exclude none. Add modules is exclude this one. FEATURE TODO", copy=True),
         'script_prebuild': fields.text('Script Pre-Build',
@@ -146,7 +150,6 @@ class runbot_prebuild(osv.osv):
                 #Get all branches from build_line of this prebuild_sticky
                 build_line_datas = build_line_pool.read(cr, uid, build_line_ids, ['branch_id'], context=context)
                 branch_ids = [ r['branch_id'][0] for r in build_line_datas ]
-
                 #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
                     _logger.info("get last commit info for check new commit")
@@ -170,7 +173,6 @@ class runbot_prebuild(osv.osv):
         """
         new_build_ids = [ ]
         branch_pool = self.pool.get('runbot.branch')
-        #prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
         build_pool = self.pool.get('runbot.build')
         build_line_pool = self.pool.get('runbot.build.line')
         for prebuild in self.browse(cr, uid, ids, context=context):
@@ -178,8 +180,6 @@ class runbot_prebuild(osv.osv):
                 if prebuild_line.check_pr:
                     branch_pr_ids = branch_pool.search(cr, uid, [('branch_base_id', '=', prebuild_line.branch_id.id)], context=context)
                     #Get build of this prebuild
-                    #build_ids = build_pool.search(cr, uid, [('prebuild_id', '=', prebuild.id)], context=context)
-                    ####prebuild_child_ids = self.search(cr, uid, [('prebuild_parent_id', '=', prebuild.id)], context=context )
                     for branch_pr in branch_pool.browse(cr, uid, branch_pr_ids, context=context):
                         #prebuild_pr_ids = prebuild_line_pool.search(cr, uid, [('branch_id', '=', branch_pr.id), ('prebuild_id', 'in', prebuild_child_ids)], limit=1)
                         build_line_pr_ids = build_line_pool.search(cr, uid, [
@@ -233,8 +233,6 @@ class runbot_prebuild(osv.osv):
         build_ids = []
         for prebuild in self.browse(cr, uid, ids, context=context):
             #Update repository but no create default build
-            context.update({'create_builds': False})
-
             #Get build_line current info
             build_line_datas = []
             for prebuild_line in prebuild.module_branch_ids:
@@ -263,10 +261,12 @@ class runbot_prebuild(osv.osv):
                 'prebuild_id': prebuild.id,#Important field for custom build and custom checkout
                 'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
                 'line_ids': build_line_datas,
+                'lang': prebuild.lang,
+                'pylint_config': prebuild.pylint_config and prebuild.pylint_config.id or False,
             }
             build_info.update( default_data or {} )
             _logger.info("Create new build from prebuild_id [%s] "%(prebuild.name) )
-            build_id = build_obj.create(cr, uid, build_info)
+            build_id = build_obj.create(cr, uid, build_info, context=context)
             build_ids.append( build_id )
         return build_ids
 
@@ -440,7 +440,11 @@ class runbot_repo(osv.osv):
             ], context=context)
         prebuild_line_datas = prebuild_line_pool.read(cr, uid, prebuild_line_sticky_ids, ['repo_id'], context=context)
         repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
-        self.update(cr, uid, repo_ids, context=context)
+
+        #Update repository but no create default build
+        context2 = context.copy()
+        context2.update({'create_builds': False})
+        self.update(cr, uid, repo_ids, context=context2)
 
         #create build from prebuild of new commit
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
