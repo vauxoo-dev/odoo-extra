@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-#TODO: license from vauxoo
+#TODO: license from vauxoo. PEP8. pylint
 from openerp.osv import fields, osv
 import os
 import shutil
@@ -33,6 +33,7 @@ def decode_utf(field):
     except UnicodeDecodeError:
         return ''
 
+REFS_DEFAULT = ['+refs/heads/*:refs/heads/*', '+refs/pull/*/head:refs/pull/*']
 
 class runbot_prebuild_branch(osv.osv):
     _name = "runbot.prebuild.branch"
@@ -153,10 +154,10 @@ class runbot_prebuild(osv.osv):
                 #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
                     _logger.info("get last commit info for check new commit")
-                    refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
+                    refs = repo_pool.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, fields=['objectname'], context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
-                        sha = ref_data['sha']
+                        sha = ref_data['objectname']
                         build_line_with_sha_ids = build_line_pool.search(cr, uid, [
                             ('branch_id', '=', branch.id),('build_id', 'in', build_ids),
                             ('sha', '=', sha)], context=context, limit=1)
@@ -241,7 +242,11 @@ class runbot_prebuild(osv.osv):
                 branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
 
                 _logger.info("get last commit info for create new build line")
-                refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, context=context)
+                refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, 
+                        fields = ['refname', 'objectname', 'committerdate:iso8601', \
+                            'authorname', 'subject', 'committername'],
+                        rename_fields = ['refname', 'sha', 'date', 'author', 'subject', \
+                            'committername'], context=context)
                 if refs and refs[branch.repo_id.id]:
                     ref_data = refs[branch.repo_id.id][0]
                     ref_data.update( new_branch_info )
@@ -252,7 +257,7 @@ class runbot_prebuild(osv.osv):
                     build_line_datas.append( (0, 0, ref_data) )
 
             build_info = {
-                'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use branch changed
+                'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use a dummy branch for not affect normal process.
                 'name': prebuild.name,
                 'author': prebuild.name,#TODO: Get this value
                 'subject': prebuild.name,#TODO: Get this value
@@ -402,28 +407,76 @@ class runbot_repo(osv.osv):
         'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
     }
 
-    def get_ref_data(self, cr, uid, ids, ref, context=None):
+    def create_branches(self, cr, uid, ids, ref=['refs/heads', 'refs/pull'], context=None):
+        branch_pool = self.pool.get('runbot.branch')
+        branch_ids = []
+        repo_id_ref_dict = self.get_ref_data(cr, uid, ids, ref=ref, fields=['refname', 'objectname'], context=context)
+        for repo_id in repo_id_ref_dict.keys():
+            for refs in repo_id_ref_dict[repo_id]:
+                name = refs.get('refname') or False
+                if name:
+                    branch_ids = branch_pool.search(cr, uid, [('repo_id', '=', repo_id), ('name', '=', name)])
+                    if not branch_ids:
+                        _logger.debug('repo id %s found new branch %s', repo_id, name)
+                        try:
+                            branch_id = branch_pool.create(cr, uid, {'repo_id': repo_id, 'name': name})
+                            branch_ids.append( branch_id )
+                        except:
+                            #cron is executed for a ir.cron or button. This make create from different cursor.
+                            #This make a error of unique branch name
+                            pass
+        return branch_ids
+
+    def get_ref_data(self, cr, uid, ids, ref, fields=None, rename_fields=None, context=None):
+        if fields is None:
+            #fields_dict = {'refname': 'refname', 'sha': 'objectname', 'date': 'committerdate:iso8601', 'author': 'authorname', 'subject', 'subject', 'committername': 'committername' }
+            #fields = ['refname', 'objectname', 'committerdate:iso8601', 'authorname', 'subject', 'committername'], rename_fields = ['refname', 'sha', 'date', 'author', 'subject', 'committername']
+            fields = ['refname', 'objectname', 'committerdate:iso8601', 'authorname', 'subject', 'committername']#TODO: Set var global. And get dict of new localnames
+        if rename_fields is None:
+            rename_fields = fields
+        if isinstance(ref, str) or isinstance(ref, basestring):
+            ref = ref.split(',')
         res = {}
         for repo in self.browse(cr, uid, ids, context=context):
             res[repo.id] = []
-            fields = ['refname','objectname','committerdate:iso8601','authorname','subject','committername']
             fmt = "%00".join(["%("+field+")" for field in fields])
-            git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', ref])
+            cmd = ['for-each-ref', '--format', fmt, '--sort=-committerdate']
+            cmd.extend( ref )
+            git_refs = repo.git( cmd )
             if git_refs:
                 git_refs = git_refs.strip()
                 refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
-                for refname, objectname, committerdate, author, subject, committername in refs:
-                    res[repo.id].append({
-                        'refname': refname,
-                        'sha': objectname,
-                        'date': dateutil.parser.parse(committerdate[:19]),
-                        'author': author,
-                        'subject': subject,
-                        'committername': committername,
-                    })
+                for data_field in refs:
+                #for refname, objectname, committerdate, author, subject, committername in refs:
+                    res[repo.id].append( dict(zip(rename_fields, data_field)) )
         return res
 
-    def cron(self, cr, uid, ids=None, context=None):
+    def fetch_git(self, cr, uid, ids, refs=REFS_DEFAULT, context=None):
+        if context is None:
+            context = {}
+        for repo in self.browse(cr, uid, ids, context=context):
+            _logger.debug('repo %s fetch branches', repo.name)
+            if not os.path.isdir(os.path.join(repo.path)):
+                os.makedirs(repo.path)
+            if not os.path.isdir(os.path.join(repo.path, 'refs')):
+                run(['git', 'clone', '--bare', repo.name, repo.path])
+            else:
+                for ref in refs:
+                    repo.git(['fetch', '-p', 'origin', ref])
+
+    def update(self, cr, uid, ids, context=None):
+        #All active repo get last version and new branches
+        all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
+        #self.fetch_git(cr, uid, all_repo_ids, context=context)#TODO: Uncomment this line
+        self.create_branches(cr, uid, all_repo_ids, context=context)
+        
+        #create build from prebuild configuration
+        self.create_build_from_prebuild(cr, uid, ids, context=context)
+        
+        #Continue with normal process
+        return super(runbot_repo, self).update(cr, uid, ids, context=context)
+
+    def create_build_from_prebuild(self, cr, uid, ids=None, context=None):
         if context is None:
             context = {}
         prebuild_pool = self.pool.get('runbot.prebuild')
@@ -441,21 +494,18 @@ class runbot_repo(osv.osv):
         prebuild_line_datas = prebuild_line_pool.read(cr, uid, prebuild_line_sticky_ids, ['repo_id'], context=context)
         repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
 
-        #Update repository but no create default build
-        context2 = context.copy()
-        context2.update({'create_builds': False})
-        self.update(cr, uid, repo_ids, context=context2)
+        #fetch repo
+        #self.fetch_git(cr, uid, repo_ids, context=context)#Make a fetch before of this function
 
         #create build from prebuild of new commit
         prebuild_ids = prebuild_pool.create_prebuild_new_commit(cr, uid, prebuild_sticky_ids, context=context)
+
         #create build from prebuild of pr
         prebuild_pr_ids = prebuild_pool.create_build_pr(cr, uid, prebuild_sticky_ids, context=context)
 
         #Get build_ids with prebuild_id set it. And assign in context for use it in scheduler function
         builds_from_prebuild_ids = build_pool.search(cr, uid, [('prebuild_id', '<>', False)], context=context)
         context['build_ids'] = builds_from_prebuild_ids
-
-        return super(runbot_repo, self).cron(cr, uid, ids, context=context)
 
     def get_branch_repo(self, cr, uid, ids, context=None):
         '''
@@ -473,7 +523,7 @@ class runbot_repo(osv.osv):
             'type': 'ir.actions.act_window',
             'domain': [('id', 'in', branch_ids)],
         }
-        
+
     def get_prebuild_repo(self, cr, uid, ids, context=None):
         '''
         Method to get the runbot prebuilds that have assigned the repo in yours lines

@@ -279,18 +279,11 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             self.update_git(cr, uid, repo, context=context)
 
-    def update_git(self, cr, uid, repo, prebuild=None, context=None):
-        if context is None:
-            context = {}
+    def update_git(self, cr, uid, repo, context=None):
         _logger.debug('repo %s updating branches', repo.name)
-
         Build = self.pool['runbot.build']
         Branch = self.pool['runbot.branch']
-        create_builds = context.get('create_builds', True)
-        build_new_ids = []
-        
-        prebuild_id = prebuild and prebuild.id or False
-        
+
         if not os.path.isdir(os.path.join(repo.path)):
             os.makedirs(repo.path)
         if not os.path.isdir(os.path.join(repo.path, 'refs')):
@@ -313,18 +306,20 @@ class runbot_repo(osv.osv):
                 branch_id = branch_ids[0]
             else:
                 _logger.debug('repo %s found new branch %s', repo.name, name)
-                try:
-                    branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name}, context=context)
-                except:
-                    #Note: Sometimes make duplicate branch why? because use different cursor or why?
-                    continue
+                branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
             branch = Branch.browse(cr, uid, [branch_id], context=context)[0]
             # skip build for old branches
             if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
                 continue
             # create build (and mark previous builds as skipped) if not found
             build_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('name', '=', sha)])
-            build_info = {
+            if not build_ids:
+                if not branch.sticky:
+                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending')])
+                    Build.skip(cr, uid, to_be_skipped_ids)
+
+                _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
+                build_info = {
                     'branch_id': branch.id,
                     'name': sha,
                     'author': author,
@@ -332,41 +327,8 @@ class runbot_repo(osv.osv):
                     'subject': subject,
                     'date': dateutil.parser.parse(date[:19]),
                     'modules': branch.repo_id.modules,
-            }
-            if not build_ids:
-                if not branch.sticky:
-                    to_be_skipped_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('state', '=', 'pending'), ('branch_dependency_id', '=', False), ('prebuild_id', '=', prebuild_id)])
-                    Build.skip(cr, uid, to_be_skipped_ids)
-
-                if create_builds:#If create_builds==True then make repo as origin process. But if create_builds==False, make repo from pre-build
-                    _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
-                    build_new_ids.append( Build.create(cr, uid, build_info, context=context) )
-                else:
-                    _logger.debug('repo %s branch %s new build found revno %s', branch.repo_id.name, branch.name, sha)
-                    build_info.update({
-                        'name': prebuild and prebuild.name or sha,
-                        'prebuild_id': prebuild_id,
-                        'team_id': prebuild and prebuild.team_id and prebuild.team_id.id or False,
-                    })
-                    build_new_ids.append( Build.create(cr, uid, build_info, context=context) )
-
-            #Get PR build of repository depends
-            if not create_builds:#If create_builds==False then make repo as origin process. But if create_builds==False, make repo from pre-build
-                repo_depend_ids = [repo_depend.id for repo_depend in branch.repo_id.dependency_ids if repo_depend.auto]
-                branch_depends_ids = Branch.search(cr, uid, [('branch_name', '=', branch.branch_name), ('repo_id', 'in', repo_depend_ids)], context=context)
-                branch_depends_pr_ids = Branch.search(cr, uid, [('branch_base_id', 'in', branch_depends_ids)], context=context)
-                for branch_depends_pr in Branch.browse(cr, uid, branch_depends_pr_ids, context=context):
-                    build_depends_pr_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('branch_dependency_id', '=', branch_depends_pr.id)], context=context)
-                    if not build_depends_pr_ids:
-                        sha = branch_depends_pr.repo_id.owner + "/" + branch_depends_pr.repo_id.repo + "-" + branch_depends_pr.name
-                        build_info.update({
-                            'branch_dependency_id': branch_depends_pr.id,
-                            'name': sha,
-                            'subject': sha,
-                            'branch_id': branch.id,
-                        })
-                        _logger.debug('repo %s branch %s new build found PR %s into dependency branch %s', branch.repo_id.name, branch.name, sha, branch_depends_pr.name)
-                        Build.create(cr, uid, build_info, context=context)
+                }
+                Build.create(cr, uid, build_info)
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
@@ -374,7 +336,6 @@ class runbot_repo(osv.osv):
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
         to_be_skipped_ids = Build.search(cr, uid, skippable_domain, order='sequence desc', offset=running_max)
         Build.skip(cr, uid, to_be_skipped_ids)
-        return build_new_ids
 
     def scheduler(self, cr, uid, ids=None, context=None):
         if context is None:
@@ -654,12 +615,6 @@ class runbot_build(osv.osv):
     }
 
     def create(self, cr, uid, values, context=None):
-        if not values.has_key('prebuild_id'):
-            print "no valude prebuild"
-            import pdb;pdb.set_trace()
-        if values.has_key('prebuild_id') and not values['prebuild_id']:
-            print "si prebuild_id value but set False"
-            import pdb;pdb.set_trace()
         build_id = super(runbot_build, self).create(cr, uid, values, context=context)
         build = self.browse(cr, uid, build_id)
         extra_info = {'sequence' : build_id}
