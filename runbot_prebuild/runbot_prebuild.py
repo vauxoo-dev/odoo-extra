@@ -151,7 +151,7 @@ class runbot_prebuild(osv.osv):
             if build_line_ids:
                 #Get all branches from build_line of this prebuild_sticky
                 build_line_datas = build_line_pool.read(cr, uid, build_line_ids, ['branch_id'], context=context)
-                branch_ids = [ r['branch_id'][0] for r in build_line_datas ]
+                branch_ids = list( set( [ r['branch_id'][0] for r in build_line_datas ] ) )
                 #Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids, context=context):
                     _logger.info("get last commit info for check new commit")
@@ -164,8 +164,9 @@ class runbot_prebuild(osv.osv):
                             ('sha', '=', sha)], context=context, limit=1)
                         if not build_line_with_sha_ids:
                             #If not last commit then create build with last commit
-                            replace_branch_info = {branch.id: {'reason_ok': True,}}
-                            build_new_id = self.create_build(cr, uid, [prebuild_id], replace_branch_info=replace_branch_info, context=context)
+                            replace_branch_info = {branch.id: {'reason_ok': True }}
+                            default_data = {'from_main_prebuild_ok': True}
+                            build_new_id = self.create_build(cr, uid, [prebuild_id], default_data=default_data, replace_branch_info=replace_branch_info, context=context)
                             build_new_ids.append( build_new_id )
         return build_new_ids
 
@@ -468,7 +469,7 @@ class runbot_repo(osv.osv):
     def update(self, cr, uid, ids, context=None):
         #All active repo get last version and new branches
         all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
-        self.fetch_git(cr, uid, all_repo_ids, context=context)
+        self.fetch_git(cr, uid, all_repo_ids, context=context)#TODO: IMP only fetch when path not exists or repo from prebuild.sticky=True or repo.auto=True
         self.create_branches(cr, uid, all_repo_ids, context=context)
         
         #create build from prebuild configuration
