@@ -33,7 +33,8 @@ def decode_utf(field):
     except UnicodeDecodeError:
         return ''
 
-REFS_DEFAULT = ['+refs/heads/*:refs/heads/*', '+refs/pull/*/head:refs/pull/*']
+REFS_FETCH_DEFAULT = ['+refs/heads/*:refs/heads/*', '+refs/pull/*/head:refs/pull/*']
+REFS_GET_DATA = ['refs/heads', 'refs/pull']
 
 class runbot_prebuild_branch(osv.osv):
     _name = "runbot.prebuild.branch"
@@ -407,7 +408,7 @@ class runbot_repo(osv.osv):
         'team_id': fields.many2one('runbot.team', 'Team', help='Team of work', copy=True),
     }
 
-    def create_branches(self, cr, uid, ids, ref=['refs/heads', 'refs/pull'], context=None):
+    def create_branches(self, cr, uid, ids, ref=REFS_GET_DATA, context=None):
         branch_pool = self.pool.get('runbot.branch')
         branch_ids = []
         repo_id_ref_dict = self.get_ref_data(cr, uid, ids, ref=ref, fields=['refname', 'objectname'], context=context)
@@ -451,7 +452,7 @@ class runbot_repo(osv.osv):
                     res[repo.id].append( dict(zip(rename_fields, data_field)) )
         return res
 
-    def fetch_git(self, cr, uid, ids, refs=REFS_DEFAULT, context=None):
+    def fetch_git(self, cr, uid, ids, refs=REFS_FETCH_DEFAULT, context=None):
         if context is None:
             context = {}
         for repo in self.browse(cr, uid, ids, context=context):
@@ -467,7 +468,7 @@ class runbot_repo(osv.osv):
     def update(self, cr, uid, ids, context=None):
         #All active repo get last version and new branches
         all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
-        #self.fetch_git(cr, uid, all_repo_ids, context=context)#TODO: Uncomment this line
+        self.fetch_git(cr, uid, all_repo_ids, context=context)
         self.create_branches(cr, uid, all_repo_ids, context=context)
         
         #create build from prebuild configuration
