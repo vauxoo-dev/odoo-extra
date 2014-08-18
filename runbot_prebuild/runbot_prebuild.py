@@ -19,41 +19,9 @@ from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 from openerp import SUPERUSER_ID
 from openerp import tools
+from openerp.addons.runbot.runbot import lock, locked, grep, mkdirs, decode_utf, log, run
 
 _logger = logging.getLogger(__name__)
-
-def mkdirs(dirs):#Copy original function from addons/runbot/runbot.py. TODO: import function
-    for d in dirs:
-        if not os.path.exists(d):
-            os.makedirs(d)
-
-def decode_utf(field):#Copy original function from addons/runbot/runbot.py TODO: import function
-    try:
-        return field.decode('utf-8')
-    except UnicodeDecodeError:
-        return ''
-def log(*l, **kw):#Copy original function from addons/runbot/runbot.py. TODO: import function
-    out = [i if isinstance(i, basestring) else repr(i) for i in l] + \
-          ["%s=%r" % (k, v) for k, v in kw.items()]
-    _logger.debug(' '.join(out))
-
-def run(l, env=None):#Copy original function from addons/runbot/runbot.py TODO: import function
-    """Run a command described by l in environment env"""
-    log("run", l)
-    env = dict(os.environ, **env) if env else None
-    if isinstance(l, list):
-        if env:
-            rc = os.spawnvpe(os.P_WAIT, l[0], l, env)
-        else:
-            rc = os.spawnvp(os.P_WAIT, l[0], l)
-    elif isinstance(l, str):
-        tmp = ['sh', '-c', l]
-        if env:
-            rc = os.spawnvpe(os.P_WAIT, tmp[0], tmp, env)
-        else:
-            rc = os.spawnvp(os.P_WAIT, tmp[0], tmp)
-    log("run", rc=rc)
-    return rc
 
 REFS_FETCH_DEFAULT = ['+refs/heads/*:refs/heads/*', '+refs/pull/*/head:refs/pull/*']
 REFS_GET_DATA = ['refs/heads', 'refs/pull']
@@ -372,6 +340,56 @@ class runbot_build(osv.osv):
                 return super(runbot_build, self).checkout(cr, uid, ids, context=context)
             else:
                 self.checkout_prebuild(cr, uid, [build.id], context=context)
+
+    def _read_file_attempts(self, fname, grep=None, max_attempt=12, seconds_delay=0.5):
+        """
+        @param file_obj : Object with the path of the file, more el mode
+            of the file to create (read, write, etc)
+        @param max_attempt : Max number of attempt
+        @param seconds_delay : Seconds valid of delay
+        """
+        if grep is None:
+            grep = ""
+        fdata = False
+        cont = 1
+        while True:
+            time.sleep(seconds_delay)
+            try:
+                with open(fname, "r") as file_obj:
+                    fdata = file_obj.read()
+                    if grep:
+                        if grep in fdata:
+                            return True
+                        else:
+                            continue
+            except:
+                pass
+            if fdata or max_attempt < cont:
+                break
+            cont += 1
+        return False
+
+    def job_30_run(self, cr, uid, build, lock_path, log_path):
+        #This function force unlock. Sometimes create a good log_run log but file keep locking
+        pid = super(runbot_build, self).job_30_run(cr, uid, build, lock_path, log_path)
+        fname_log_run = build.path('logs', 'job_30_run.txt')
+        fname_log_run_lock = build.path('logs', 'job_30_run.lock')
+        read_ok = self._read_file_attempts(fname_log_run, grep=".modules.loading: Modules loaded.", max_attempt=25, seconds_delay=5)
+        if read_ok:
+            #If read_ok, then force unlock file
+            build._log('run', 'force unlock/lock file %s'%( os.path.basename(fname_log_run_lock) ) )
+            if locked(fname_log_run_lock):
+                try:
+                    os.remove(fname_log_run_lock)
+                except:
+                    pass
+                context2 = {'build_ids': [build.id]}
+                self.pool.get('runbot.repo').scheduler(cr, uid, ids=None, context=context2)#next step of this build
+                lock(fname_log_run_lock)#lock to keep running instance
+        else:
+            build._log('run', 'Can\'t unlock file %s'%(fname_log_run_lock) )
+            #TODO: Mark build
+        return pid
 
 class runbot_build_line(osv.osv):
     _name = 'runbot.build.line'
