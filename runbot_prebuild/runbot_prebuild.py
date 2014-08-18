@@ -486,12 +486,20 @@ class runbot_repo(osv.osv):
                 os.makedirs(repo.path)
             if not os.path.isdir(os.path.join(repo.path, 'refs')):
                 #repo.git(['clone', '--bare', repo.name])#TODO: Get clone with this function
-                run(['git', 'clone', '--bare', repo.name, repo.path])
+                try:
+                    run(['git', 'clone', '--bare', repo.name, repo.path])
+                except:
+                    #TODO: Get exception of lost connection... no internet
+                    pass
                 repo_updated_ids.append(repo.id)
             else:
                 if not clone_only:
                     for ref in refs:
-                        repo.git(['fetch', '-p', 'origin', ref])
+                        try:
+                            repo.git(['fetch', '-p', 'origin', ref])
+                        except:
+                            #TODO: Get exception of lost connection... no internet
+                            pass
                         repo_updated_ids.append(repo.id)
         return repo_updated_ids
 
