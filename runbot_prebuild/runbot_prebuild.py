@@ -339,7 +339,7 @@ class runbot_branch(osv.osv):
         'full_name': fields.function(_get_branch_fullname, string='Full name',
             type='char',
             store={
-                'runbot.branch': (lambda self, cr, uid, ids, c={}: ids, [], 50),
+                'runbot.branch': (lambda self, cr, uid, ids, c={}: ids, ['name'], 50),
                 'runbot.repo': (_get_name_repo, ['name',], 50),
                 })
     }
