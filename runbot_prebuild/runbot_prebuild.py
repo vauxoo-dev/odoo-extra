@@ -494,6 +494,7 @@ class runbot_repo(osv.osv):
         return branch_ids
 
     def git(self, cr, uid, ids, cmd, context=None):
+        #make a log debug if path not exists
         for repo in self.browse(cr, uid, ids, context=context):
             if os.path.exists( repo.path ):
                 return super(runbot_repo, self).git(cr, uid, ids, cmd=cmd, context=context)
@@ -536,19 +537,19 @@ class runbot_repo(osv.osv):
                 #repo.git(['clone', '--bare', repo.name])#TODO: Get clone with this function
                 try:
                     run(['git', 'clone', '--bare', repo.name, repo.path])
+                    repo_updated_ids.append(repo.id)
                 except:
                     #TODO: Get exception of lost connection... no internet
                     pass
-                repo_updated_ids.append(repo.id)
             else:
                 if not clone_only:
                     for ref in refs:
                         try:
                             repo.git(['fetch', '-p', 'origin', ref])
+                            repo_updated_ids.append(repo.id)
                         except:
                             #TODO: Get exception of lost connection... no internet
                             pass
-                        repo_updated_ids.append(repo.id)
         return repo_updated_ids
 
     def update(self, cr, uid, ids, context=None):
