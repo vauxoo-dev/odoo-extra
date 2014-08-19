@@ -340,7 +340,7 @@ class runbot_branch(osv.osv):
             type='char',
             store={
                 'runbot.branch': (lambda self, cr, uid, ids, c={}: ids, [], 50),
-                'runbot.repo': (_get_name_repo, None, 50),
+                'runbot.repo': (_get_name_repo, ['name',], 50),
                 })
     }
 
