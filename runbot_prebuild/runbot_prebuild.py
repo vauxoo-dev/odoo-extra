@@ -230,23 +230,13 @@ class runbot_prebuild(osv.osv):
             build_line_datas = []
             for prebuild_line in prebuild.module_branch_ids:
                 new_branch_info = replace_branch_info.get(prebuild_line.branch_id.id, {}) or {}
-                branch_id = new_branch_info.get('branch_id', False) or prebuild_line.branch_id.id
-                branch = branch_obj.browse(cr, uid, [branch_id], context=context)[0]
+                branch_id = new_branch_info.pop('branch_id', False) or prebuild_line.branch_id.id
+                new_branch_info.update({
+                    'branch_id': branch_id,
+                    'prebuild_line_id': prebuild_line.id,
+                })
 
-                _logger.info("get last commit info for create new build line")
-                refs = repo_obj.get_ref_data(cr, uid, [branch.repo_id.id], branch.name, 
-                        fields = ['refname', 'objectname', 'committerdate:iso8601', \
-                            'authorname', 'subject', 'committername'],
-                        rename_fields = ['refname', 'sha', 'date', 'author', 'subject', \
-                            'committername'], context=context)
-                if refs and refs[branch.repo_id.id]:
-                    ref_data = refs[branch.repo_id.id][0]
-                    ref_data.update( new_branch_info )
-                    ref_data.update({
-                        'branch_id': branch_id,
-                        'prebuild_line_id': prebuild_line.id,
-                    })
-                    build_line_datas.append( (0, 0, ref_data) )
+                build_line_datas.append( (0, 0, new_branch_info) )
 
             build_info = {
                 'branch_id': prebuild_line.branch_id.id,#Any branch. Useless. Last of for. TODO: Use a dummy branch for not affect normal process.
@@ -264,6 +254,7 @@ class runbot_prebuild(osv.osv):
             build_info.update( default_data or {} )
             _logger.info("Create new build from prebuild_id [%s] "%(prebuild.name) )
             build_id = build_obj.create(cr, uid, build_info, context=context)
+            build_obj.fetch_build_lines(cr, uid, [build_id], context=context)
             build_ids.append( build_id )
         return build_ids
 
@@ -285,6 +276,23 @@ class runbot_branch(osv.osv):
 
 class runbot_build(osv.osv):
     _inherit = "runbot.build"
+
+    def fetch_build_lines(self, cr, uid, ids, context=None):
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        build_line_pool = self.pool.get('runbot.build.line')
+        build_line_ids = build_line_pool.search(cr, uid, [('build_id', 'in', ids)], context=context)
+        build_line_pool.fetch_build_line(cr, uid, build_line_ids, context=context)
+        return build_line_ids
+
+    def copy(self, cr, uid, id, default=None, context=None):
+        if context is None:
+            context= {}
+        fetch_build = context.get('fetch_build', True)
+        new_id = super(runbot_build, self).copy(cr, uid, id, default, context=context)
+        if fetch_build:
+            self.fetch_build_lines(cr, uid, [new_id], context=context)
+        return new_id
 
     _columns = {
         'from_main_prebuild_ok': fields.boolean('', copy=True,
@@ -395,6 +403,19 @@ class runbot_build_line(osv.osv):
     _name = 'runbot.build.line'
     _rec_name = 'sha'
 
+    def fetch_build_line(self, cr, uid, ids, context=None):
+        for line in self.browse(cr, uid, ids, context=context):
+            refs = line.repo_id.get_ref_data(line.branch_id.name, 
+                    fields = ['refname', 'objectname', 'committerdate:iso8601', \
+                        'authorname', 'subject', 'committername'],
+                    rename_fields = ['refname', 'sha', 'date', 'author', 'subject', \
+                        'committername'], context=context)[line.repo_id.id][0]
+            if line.sha and line.sha <> refs['sha']:
+                refs.update({'reason_ok': True})
+            self.write(cr, uid, [line.id], refs, context=context)
+        return True
+
+
     def _get_url_commit(self, cr, uid, ids, fields, name, args, context=None):
         if not context:
             context = {}
@@ -402,10 +423,11 @@ class runbot_build_line(osv.osv):
         for line in self.browse(cr, uid, ids, context=context):
             repo = line.repo_id
             url = False
-            if repo.host_driver == 'github':
-                url = repo.url+'/commit/'+line.sha
-            elif repo.host_driver == 'bitbucket':
-                url = repo.url+'/commits/'+line.sha
+            if line.sha:
+                if repo.host_driver == 'github':
+                    url = repo.url+'/commit/'+line.sha
+                elif repo.host_driver == 'bitbucket':
+                    url = repo.url+'/commits/'+line.sha
             res[line.id] = url
         return res
 
@@ -414,8 +436,10 @@ class runbot_build_line(osv.osv):
             context = {}
         res = {}
         for prebuild_line in self.browse(cr, uid, ids, context=context):
-            res[ prebuild_line.id ] = len(prebuild_line.sha) > 7 and \
-                prebuild_line.sha[:7] or prebuild_line.sha
+            res[ prebuild_line.id ] = False
+            if prebuild_line.sha:
+                res[ prebuild_line.id ] = len(prebuild_line.sha) > 7 and \
+                    prebuild_line.sha[:7] or prebuild_line.sha
         return res
 
     _columns = {
@@ -427,7 +451,7 @@ class runbot_build_line(osv.osv):
             ondelete='cascade', select=1),
         'refname': fields.char('Ref Name'),
         'sha': fields.char('SHA commit', size=40,
-            help='Version of commit or sha', required=True),
+            help='Version of commit or sha', required=False),
         'date': fields.datetime('Commit date'),
         'author': fields.char('Author'),
         'commit_url': fields.function(_get_url_commit, string='Commit URL', type='char', help='URL of last commit for this branch'),

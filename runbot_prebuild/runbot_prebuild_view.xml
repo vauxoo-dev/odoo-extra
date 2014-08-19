@@ -146,8 +146,8 @@
                         <tree string="Build Lines">
                             <field name="branch_id"/>
                             <field name="refname"/>
-                            <field name="sha"/>
                             <field name="short_sha"/>
+                            <field name="commit_url" widget="url"/>
                             <field name="date"/>
                             <field name="author"/>
                             <field name="subject"/>
@@ -158,8 +158,8 @@
                         <form string="Build Lines">
                             <field name="branch_id"/>
                             <field name="refname"/>
-                            <field name="sha"/>
                             <field name="short_sha"/>
+                            <field name="commit_url" widget="url"/>
                             <field name="date"/>
                             <field name="author"/>
                             <field name="subject"/>
@@ -171,6 +171,8 @@
                 </xpath>
                 <xpath expr="//header/button[@name='reset']" position="after">
                     <button name="force_schedule" type="object" string="Force run build"/>
+                    <button name="fetch_build_lines" type="object" string="Fetch build"/>
+                    <button name="kill" type="object" string="Kill build"/>
                 </xpath>
             </field>
         </record>
