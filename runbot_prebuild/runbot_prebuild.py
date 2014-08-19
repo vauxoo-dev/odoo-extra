@@ -569,6 +569,12 @@ class runbot_repo(osv.osv):
         self.create_build_from_prebuild(cr, uid, None, context=context)
         
         #Continue with normal process
+        #but before fix a error
+        ids = list(set(ids))
+        for repo_data in self.read(cr, uid, ids, ['path'], context=context):
+            if not os.path.isdir( os.path.join(repo_data['path'], 'refs') ):
+                ids.pop( ids.index( repo_data['id'] ) )
+
         return super(runbot_repo, self).update(cr, uid, ids, context=context)
 
     def create_build_from_prebuild(self, cr, uid, ids=None, context=None):
