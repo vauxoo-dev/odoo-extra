@@ -493,6 +493,12 @@ class runbot_repo(osv.osv):
                             pass
         return branch_ids
 
+    def git(self, cr, uid, ids, cmd, context=None):
+        for repo in self.browse(cr, uid, ids, context=context):
+            if os.path.exists( repo.path ):
+                return super(runbot_repo, self).git(cr, uid, ids, cmd=cmd, context=context)
+        _logger.debug('repo path %s not found', repo.path)
+        
     def get_ref_data(self, cr, uid, ids, ref, fields=None, rename_fields=None, context=None):
         if fields is None:
             #fields_dict = {'refname': 'refname', 'sha': 'objectname', 'date': 'committerdate:iso8601', 'author': 'authorname', 'subject', 'subject', 'committername': 'committername' }
