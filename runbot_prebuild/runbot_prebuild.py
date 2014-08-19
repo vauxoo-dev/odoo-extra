@@ -349,6 +349,7 @@ class runbot_build(osv.osv):
             else:
                 self.checkout_prebuild(cr, uid, [build.id], context=context)
 
+    '''
     def _read_file_attempts(self, fname, grep=None, max_attempt=12, seconds_delay=0.5):
         """
         @param file_obj : Object with the path of the file, more el mode
@@ -377,6 +378,7 @@ class runbot_build(osv.osv):
             cont += 1
         return False
 
+    #Make a instance with connect button very low time. File keep unlock
     def job_30_run(self, cr, uid, build, lock_path, log_path):
         #This function force unlock. Sometimes create a good log_run log but file keep locking
         pid = super(runbot_build, self).job_30_run(cr, uid, build, lock_path, log_path)
@@ -398,7 +400,7 @@ class runbot_build(osv.osv):
             build._log('run', 'Can\'t unlock file %s'%(fname_log_run_lock) )
             #TODO: Mark build
         return pid
-
+    '''
 class runbot_build_line(osv.osv):
     _name = 'runbot.build.line'
     _rec_name = 'sha'
