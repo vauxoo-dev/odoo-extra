@@ -566,9 +566,7 @@ class runbot_repo(osv.osv):
 
         #Search repo used into prebuild from sticky build (and check pr or check new commit) to update
         prebuild_line_sticky_ids = prebuild_line_pool.search(cr, uid, [
-                '&', ('prebuild_id', 'in', prebuild_sticky_ids),
-                '|', ('check_pr', '=', True),
-                ('check_new_commit', '=', True),
+                ('prebuild_id', 'in', prebuild_sticky_ids),
             ], context=context)
         prebuild_line_datas = prebuild_line_pool.read(cr, uid, prebuild_line_sticky_ids, ['repo_id'], context=context)
         repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
