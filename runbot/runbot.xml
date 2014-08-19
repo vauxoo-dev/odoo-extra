@@ -159,6 +159,7 @@
                         <field name="state"/>
                         <field name="result"/>
                         <field name="pid"/>
+                        <field name="host"/>
                         <field name="job_start"/>
                         <field name="job_end"/>
                         <field name="job_time"/>
@@ -185,6 +186,7 @@
                 <field name="job"/>
                 <field name="result"/>
                 <field name="pid"/>
+                <field name="host"/>
                 <field name="job_start"/>
                 <field name="job_time"/>
                 <field name="job_age"/>
@@ -197,7 +199,7 @@
         <field name="model">runbot.build</field>
         <field name="arch" type="xml">
             <graph string="Builds" type="pivot">
-                <field name="repo_id" type="row"/>
+                <field name="create_date" interval="week" type="row"/>
                 <field name="state" type="col"/>
             </graph>
         </field>
@@ -293,8 +295,8 @@
                     </li>
                     <li t-if="bu['state']!='testing' and bu['state']!='pending'" class="divider"></li>
                     <li><a t-attf-href="/runbot/build/{{bu['id']}}">Logs <i class="fa fa-file-text-o"/></a></li>
-                    <li><a t-attf-href="/runbot/static/build/#{bu['real_dest']}/logs/job_10_test_base.txt">Full base logs <i class="fa fa-file-text-o"/></a></li>
-                    <li><a t-attf-href="/runbot/static/build/#{bu['real_dest']}/logs/job_20_test_all.txt">Full all logs <i class="fa fa-file-text-o"/></a></li>
+                    <li><a t-attf-href="{{bu['host']}}/runbot/static/build/#{bu['real_dest']}/logs/job_10_test_base.txt">Full base logs <i class="fa fa-file-text-o"/></a></li>
+                    <li><a t-attf-href="{{bu['host']}}/runbot/static/build/#{bu['real_dest']}/logs/job_20_test_all.txt">Full all logs <i class="fa fa-file-text-o"/></a></li>
                     <li t-if="bu['state']!='pending'" class="divider"></li>
                     <li><a t-attf-href="{{br['branch'].branch_url}}">Branch or pull <i class="fa fa-github"/></a></li>
                     <li><a t-attf-href="https://{{repo.base}}/commit/{{bu['name']}}">Commit <i class="fa fa-github"/></a></li>
@@ -380,8 +382,8 @@
                                   </div>
                                 </form>
                                 <span class="navbar-brand navbar-right">
-                                  <t t-esc="testing_total"/>/<t t-esc="workers"/> testing,
-                                  <t t-esc="running_total"/>/<t t-esc="running_max"/> running,
+                                  <t t-esc="testing_total"/> testing,
+                                  <t t-esc="running_total"/> running,
                                   <t t-esc="pending_total"/> pending
                                 </span>
                               </t>
@@ -623,6 +625,8 @@ http {
     server {
         listen 8080 default;
         location / { proxy_pass http://127.0.0.1:<t t-esc="port"/>; }
+        location /longpolling/im/poll { return 404; }
+        location /longpolling/poll { return 404; }
     }
     <t t-foreach="builds" t-as="build">
     server {

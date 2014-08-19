@@ -4,6 +4,7 @@ import datetime
 import fcntl
 import glob
 import hashlib
+import itertools
 import logging
 import operator
 import os
@@ -12,11 +13,11 @@ import resource
 import shutil
 import signal
 import simplejson
+import socket
 import subprocess
-import time
 import sys
+import time
 from collections import OrderedDict
-import itertools
 
 import dateutil.parser
 import requests
@@ -32,6 +33,19 @@ from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 
 _logger = logging.getLogger(__name__)
+
+#----------------------------------------------------------
+# Runbot Const
+#----------------------------------------------------------
+
+_re_error = r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (?:ERROR|CRITICAL) )|(?:Traceback \(most recent call last\):)$'
+_re_warning = r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ WARNING '
+_re_job = re.compile('job_\d')
+
+LABELS = {
+    1: 'RDWIP',
+    2: 'OE',
+}
 
 #----------------------------------------------------------
 # RunBot helpers
@@ -59,10 +73,6 @@ def grep(filename, string):
     if os.path.isfile(filename):
         return open(filename).read().find(string) != -1
     return False
-
-_re_error = r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (?:ERROR|CRITICAL) )|(?:Traceback \(most recent call last\):)$'
-_re_warning = r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ WARNING '
-_re_job = re.compile('job_\d')
 
 def rfind(filename, pattern):
     """Determine in something in filename matches the pattern"""
@@ -136,6 +146,9 @@ def decode_utf(field):
 
 def uniq_list(l):
     return OrderedDict.fromkeys(l).keys()
+
+def fqdn():
+    return socket.gethostname()
 
 #----------------------------------------------------------
 # RunBot Models
@@ -231,7 +244,7 @@ class runbot_repo(osv.osv):
     }
 
     def domain(self, cr, uid, context=None):
-        domain = self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.domain', 'runbot.odoo.com')
+        domain = self.pool.get('ir.config_parameter').get_param(cr, uid, 'runbot.domain', fqdn())
         return domain
 
     def root(self, cr, uid, context=None):
@@ -344,9 +357,9 @@ class runbot_repo(osv.osv):
         icp = self.pool['ir.config_parameter']
         workers = int(icp.get_param(cr, uid, 'runbot.workers', default=6))
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
+        host = fqdn()
 
         Build = self.pool['runbot.build']
-
         domain = []
         if build_ids:
             domain.append( ('id', 'in', build_ids) )
@@ -354,13 +367,16 @@ class runbot_repo(osv.osv):
             domain.append( ('repo_id', 'in', ids) )
         if len(domain) == 2:
             domain.insert(0, '|')
+        #domain = [('repo_id', 'in', ids)]#new change: TODO: Now not receive build_ids. This is used in our custom modules?
+        #domain_host = domain + [('host', '=', host)]#new change
+        domain_host = []
 
         # schedule jobs (transitions testing -> running, kill jobs, ...)
-        build_ids = Build.search(cr, uid, domain + [('state', 'in', ['testing', 'running'])])
+        build_ids = Build.search(cr, uid, domain_host + [('state', 'in', ['testing', 'running'])])
         Build.schedule(cr, uid, build_ids)
 
         # launch new tests
-        testing = Build.search_count(cr, uid, domain + [('state', '=', 'testing')])
+        testing = Build.search_count(cr, uid, domain_host + [('state', '=', 'testing')])
         pending = Build.search_count(cr, uid, domain + [('state', '=', 'pending')])
 
         while testing < workers and pending > 0:
@@ -374,11 +390,11 @@ class runbot_repo(osv.osv):
             pending_build.schedule()
 
             # compute the number of testing and pending jobs again
-            testing = Build.search_count(cr, uid, domain + [('state', '=', 'testing')])
+            testing = Build.search_count(cr, uid, domain_host + [('state', '=', 'testing')])
             pending = Build.search_count(cr, uid, domain + [('state', '=', 'pending')])
 
         # terminate and reap doomed build
-        build_ids = Build.search(cr, uid, domain + [('state', '=', 'running')])
+        build_ids = Build.search(cr, uid, domain_host + [('state', '=', 'running')])
         # sort builds: the last build of each sticky branch then the rest
         sticky = {}
         non_sticky = []
@@ -579,7 +595,7 @@ class runbot_build(osv.osv):
         domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
             if build.repo_id.nginx:
-                result[build.id] = "%s.%s" % (build.dest, domain)
+                result[build.id] = "%s.%s" % (build.dest, build.host)
             else:
                 result[build.id] = "%s:%s" % (domain, build.port)
         return result
@@ -589,6 +605,7 @@ class runbot_build(osv.osv):
         'repo_id': fields.related('branch_id', 'repo_id', type="many2one", relation="runbot.repo", string="Repository", readonly=True, store=True, ondelete='cascade', select=1),
         'name': fields.char('Revno', required=True, select=1, copy=True),
         'port': fields.integer('Port', copy=False),
+        'host': fields.char('Host'),
         'dest': fields.function(_get_dest, type='char', string='Dest', readonly=1, store=True),
         'domain': fields.function(_get_domain, type='char', string='URL'),
         'date': fields.datetime('Commit date', copy=True),
@@ -745,24 +762,12 @@ class runbot_build(osv.osv):
                     )
 
     def pg_dropdb(self, cr, uid, dbname):
-        try:
-            openerp.service.db.exp_drop(dbname)
-        except Exception:
-            pass
+        run(['dropdb', dbname])
 
     def pg_createdb(self, cr, uid, dbname):
         self.pg_dropdb(cr, uid, dbname)
         _logger.debug("createdb %s", dbname)
-
-        # we don't use _create_empty_database because we need to enforce database collate to "C"
-        db = openerp.sql_db.db_connect('postgres')
-        with db.cursor() as cr:
-            cr.autocommit(True)     # avoid transaction block
-            cr.execute("""CREATE DATABASE "%s"
-                                 ENCODING 'unicode'
-                               LC_COLLATE = 'C'
-                                 TEMPLATE template0
-                       """ % (dbname,))
+        run(['createdb', '--encoding=unicode', '--lc-collate=C', '--template=template0', dbname])
 
     def cmd(self, cr, uid, ids, context=None):
         """Return a list describing the command to start the build"""
@@ -969,6 +974,7 @@ class runbot_build(osv.osv):
                 # allocate port and schedule first job
                 port = self.find_port(cr, uid)
                 values = {
+                    'host': fqdn(),
                     'port': port,
                     'state': 'testing',
                     'job': jobs[0],
@@ -1099,8 +1105,6 @@ class RunbotController(http.Controller):
         context = {
             'repos': repos,
             'repo': repo,
-            'workers': icp.get_param(cr, uid, 'runbot.workers', default=6),
-            'running_max': icp.get_param(cr, uid, 'runbot.running_max', default=75),
             'pending_total': build_obj.search_count(cr, uid, [('state','=','pending')]),
             'testing_total': build_obj.search_count(cr, uid, [('state','=','testing')]),
             'running_total': build_obj.search_count(cr, uid, [('state','=','running')]),
@@ -1208,6 +1212,7 @@ class RunbotController(http.Controller):
             'job_time': s2human(real_build.job_time),
             'job': real_build.job,
             'domain': real_build.domain,
+            'host': real_build.host,
             'port': real_build.port,
             'subject': build.subject,
         }
@@ -1365,12 +1370,6 @@ class RunbotController(http.Controller):
             ('ETag', retag),
         ]
         return request.render("runbot.badge_" + theme, data, headers=headers)
-
-
-LABELS = {
-    1: 'RDWIP',
-    2: 'OE',
-}
 
 # kill ` ps faux | grep ./static  | awk '{print $2}' `
 # ps faux| grep Cron | grep -- '-all'  | awk '{print $2}' | xargs kill
