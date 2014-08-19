@@ -255,6 +255,7 @@
             <xpath expr="//field[@name='name']" position="after">
                 <field name="repo_id" filter_domain="[('repo_id.name','ilike',self),]"/>
                 <field name="branch_base_id" filter_domain="[('branch_base_id.name','ilike',self),]"/>
+                <field name="full_name"/>
             </xpath>
             <xpath expr="//filter[@string='Owner']" position="after">
                 <filter string="Branch Base" domain="[]" context="{'group_by':'branch_base_id'}"/>

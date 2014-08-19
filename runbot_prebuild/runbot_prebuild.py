@@ -322,7 +322,7 @@ class runbot_branch(osv.osv):
                 branch.repo_id and branch.repo_id.name or '' )
         return res
         
-    def _get_name_repo(self, cr, uid, ids, context=None):
+    def _get_name_repo(self, cr, uid, repo_ids, context=None):
         '''
         This method is used to update data in full_name field with the next
             format when the name of repo is changed:
@@ -330,20 +330,9 @@ class runbot_branch(osv.osv):
         '''
         if context is None:
             context = {}
-        res = {}
         branch_obj = self.pool.get('runbot.branch')
-        for repo in self.pool.get('runbot.repo').browse(cr, uid, ids,
-            context=context):
-            branch_ids = branch_obj.search(cr, uid, [
-                ('repo_id', '=', repo.id), ], context=context)
-            for branch in branch_obj.browse(cr, uid, branch_ids,
-                context=context):
-                res[branch.id] = '[' + ( branch.name or '' )+ '] ' + (
-                    repo.name or '' )
-        branch_ids = []
-        if res:
-            branch_ids = branch_obj.search(cr, uid, [
-                ('repo_id', 'in', res.keys())], context=context)
+        branch_ids = branch_obj.search(cr, uid, [
+                ('repo_id', 'in', repo_ids), ], context=context)
         return branch_ids
         
     _columns = {
