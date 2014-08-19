@@ -554,22 +554,50 @@ class runbot_repo(osv.osv):
                             pass
         return repo_updated_ids
 
+    def get_sticky_repo_ids(self, cr, uid, ids, context=None):
+        #TODO: docstring. Search sticky repo from prebuild sticky
+        if context is None:
+            context = {}
+
+        prebuild_pool = self.pool.get('runbot.prebuild')
+        prebuild_line_pool = self.pool.get('runbot.prebuild.branch')
+
+        prebuild_sticky_ids = prebuild_pool.search(cr, uid, [('sticky', '=', True)], context=context)
+
+        #Search repo used into prebuild from sticky build (and check pr or check new commit) to update
+        prebuild_line_sticky_ids = prebuild_line_pool.search(cr, uid, [
+                '&', ('prebuild_id', 'in', prebuild_sticky_ids),
+                '|', ('check_pr', '=', True),
+                ('check_new_commit', '=', True),
+            ], context=context)
+        prebuild_line_datas = prebuild_line_pool.read(cr, uid, prebuild_line_sticky_ids, ['repo_id'], context=context)
+        repo_ids = list( set( [prebuild_line_data['repo_id'][0] for prebuild_line_data in prebuild_line_datas] ) )
+        return repo_ids
+
     def update(self, cr, uid, ids, context=None):
         #All active repo get last version and new branches
         if context is None:
             context = {}
-        all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
 
+        #Clone first time of all branches
         context2 = context.copy()
         context2.update({'clone_only': True})
-        repo_updated_ids = self.fetch_git(cr, uid, all_repo_ids, context=context2)
-        new_branch_ids = self.create_branches(cr, uid, repo_updated_ids, context=context)
-        
-        #create build from prebuild configuration
+        all_repo_ids = self.pool.get('runbot.repo').search(cr, uid, [], context=context)
+        repo_cloned_ids = self.fetch_git(cr, uid, all_repo_ids, context=context2)
+
+        #Fetch sticky repo
+        repo_sticky_ids = self.get_sticky_repo_ids(cr, uid, ids, context=context)
+        repo_fetched_ids = self.fetch_git(cr, uid, repo_sticky_ids, context=context)
+
+        #Create new branches from previous fetch and clone
+        repo_ids = list( set( repo_cloned_ids + repo_fetched_ids ) )
+        new_branch_ids = self.create_branches(cr, uid, repo_ids, context=context)
+
+        #Create build from prebuild configuration
         self.create_build_from_prebuild(cr, uid, None, context=context)
-        
+
         #Continue with normal process
-        #but before fix a error
+        #but before fix a error. If path not exists then no update.
         ids = list(set(ids))
         for repo_data in self.read(cr, uid, ids, ['path'], context=context):
             if not os.path.isdir( os.path.join(repo_data['path'], 'refs') ):
