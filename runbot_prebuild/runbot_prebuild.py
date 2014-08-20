@@ -259,6 +259,9 @@ class runbot_prebuild(osv.osv):
         return build_ids
 
 class runbot_branch(osv.osv):
+    '''
+    The inherit of this class is used to add the field full_name in the model
+    '''
     _inherit = "runbot.branch"
 
     def name_get(self, cr, uid, ids, context=None):
@@ -273,6 +276,64 @@ class runbot_branch(osv.osv):
             name = '[' + record[1] + '] ' + branch.repo_id.name
             res.append((record[0], name))
         return res
+    
+    def name_search(self, cr, uid, name, args=None, operator='ilike',
+        context=None, limit=100):
+        '''
+        This method added in the many2one to this model that can search
+        by full_name.
+        '''
+        if not args:
+            args = []
+        if not context:
+            context = {}
+        ids = []
+        res = super(runbot_branch, self).name_search(cr, uid, name, args=args,
+            operator=operator, context=context, limit=limit)
+        for element in res:
+            ids.append(element[0])
+        if name:
+            ids2 = self.search(cr, uid, [('full_name', operator, name)] + args,
+                limit=limit, context=context)
+            ids.extend( ids2 )
+        ids = list( set ( ids ))
+        return self.name_get(cr, uid, ids, context)
+    
+    def _get_branch_fullname(self, cr, uid, ids, name, args, context=None):
+        '''
+        This method is used to load data in full_name field with the next
+            format:
+            [branch.name] branch.repo_id.name
+        '''
+        if context is None:
+            context = {}
+        res = {}
+        for branch in self.browse(cr, uid, ids, context=context):
+            res[branch.id] = '[' + ( branch.name or '' )+ '] ' + (
+                branch.repo_id and branch.repo_id.name or '' )
+        return res
+        
+    def _get_name_repo(self, cr, uid, repo_ids, context=None):
+        '''
+        This method is used to update data in full_name field with the next
+            format when the name of repo is changed:
+            [branch.name] branch.repo_id.name
+        '''
+        if context is None:
+            context = {}
+        branch_obj = self.pool.get('runbot.branch')
+        branch_ids = branch_obj.search(cr, uid, [
+                ('repo_id', 'in', repo_ids), ], context=context)
+        return branch_ids
+        
+    _columns = {
+        'full_name': fields.function(_get_branch_fullname, string='Full name',
+            type='char',
+            store={
+                'runbot.branch': (lambda self, cr, uid, ids, c={}: ids, ['name'], 50),
+                'runbot.repo': (_get_name_repo, ['name',], 50),
+                })
+    }
 
 class runbot_build(osv.osv):
     _inherit = "runbot.build"

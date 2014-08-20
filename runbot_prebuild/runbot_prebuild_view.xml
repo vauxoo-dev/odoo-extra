@@ -257,6 +257,7 @@
             <xpath expr="//field[@name='name']" position="after">
                 <field name="repo_id" filter_domain="[('repo_id.name','ilike',self),]"/>
                 <field name="branch_base_id" filter_domain="[('branch_base_id.name','ilike',self),]"/>
+                <field name="full_name"/>
             </xpath>
             <xpath expr="//filter[@string='Owner']" position="after">
                 <filter string="Branch Base" domain="[]" context="{'group_by':'branch_base_id'}"/>
@@ -277,5 +278,25 @@
         </field>
     </record>
     
+    <record id="view_branch_form_inh_full_name" model="ir.ui.view">
+        <field name="model">runbot.branch</field>
+        <field name="inherit_id" ref="runbot.view_branch_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="full_name"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_branch_tree_inh_full_name" model="ir.ui.view">
+        <field name="model">runbot.branch</field>
+        <field name="inherit_id" ref="runbot.view_branch_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="full_name"/>
+            </xpath>
+        </field>
+    </record>
+
     </data>
 </openerp>
