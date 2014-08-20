@@ -286,9 +286,9 @@
                         <a t-attf-href="/runbot/build/{{bu['id']}}/force">Force Build<i class="fa fa-level-up"> </i></a>
                     </li>
                     <t t-if="bu['state']=='running'">
-                        <li><a t-attf-href="http://{{bu['domain']}}/?db={{bu['real_dest']}}-all">Connect all <i class="fa fa-sign-in"></i></a></li>
-                        <li><a t-attf-href="http://{{bu['domain']}}/?db={{bu['real_dest']}}-base">Connect base <i class="fa fa-sign-in"></i></a></li>
-                        <li><a t-attf-href="http://{{bu['domain']}}/">Connect <i class="fa fa-sign-in"></i></a></li>
+                        <li><a t-attf-href="http://{{bu['host']}}/?db={{bu['real_dest']}}-all">Connect all <i class="fa fa-sign-in"></i></a></li>
+                        <li><a t-attf-href="http://{{bu['host']}}/?db={{bu['real_dest']}}-base">Connect base <i class="fa fa-sign-in"></i></a></li>
+                        <li><a t-attf-href="http://{{bu['host']}}/">Connect <i class="fa fa-sign-in"></i></a></li>
                     </t>
                     <li t-if="bu['state'] in ['done','running'] and bu_index==0">
                         <a t-attf-href="/runbot/build/#{bu['id']}/force">Rebuild <i class="fa fa-refresh"/></a>
