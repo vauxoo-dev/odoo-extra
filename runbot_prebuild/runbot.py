@@ -203,7 +203,7 @@ class runbot_build(osv.osv):
             string='Runbot Pre-Build', required=False,
             help="This is the origin of instance data.", copy=True),
         'line_ids': fields.one2many('runbot.build.line', 'build_id',
-            string='Build branches lines', readonly=True, copy=True),
+            string='Build branches lines', readonly=False, copy=True),
         'team_id': fields.many2one('runbot.team', 'Team', help='Team of work',
             copy=True),
     }

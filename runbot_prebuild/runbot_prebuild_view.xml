@@ -142,22 +142,21 @@
                     <field name="prebuild_id"/>
                     <field name="team_id"/>
                     <field name="from_main_prebuild_ok"/>
-                    <field name="line_ids">
+                    <separator string="Build lines" colspan="4"/>
+                    <field name="line_ids" readonly="1" nolabel="1" colspan="4">
                         <tree string="Build Lines">
                             <field name="branch_id"/>
-                            <field name="refname"/>
                             <field name="short_sha"/>
-                            <field name="commit_url" widget="url"/>
                             <field name="date"/>
                             <field name="author"/>
                             <field name="subject"/>
                             <field name="committername"/>
-                            <field name="prebuild_line_id"/>
                             <field name="reason_ok"/>
                         </tree>
                         <form string="Build Lines">
                             <field name="branch_id"/>
                             <field name="refname"/>
+                            <field name="sha"/>
                             <field name="short_sha"/>
                             <field name="commit_url" widget="url"/>
                             <field name="date"/>
