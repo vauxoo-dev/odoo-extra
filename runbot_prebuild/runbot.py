@@ -185,7 +185,6 @@ class runbot_build(osv.osv):
         @param default: Dict of values to assign in the copy
         @param context: context arguments, like lang, time zone
         '''
-        print 'default', default
         if context is None:
             context = {}
         fetch_build = context.get('fetch_build', True)
