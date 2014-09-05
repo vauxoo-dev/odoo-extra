@@ -207,7 +207,7 @@
             </field>
         </record>
 
-    <template id="runbot_prebuild" inherit_id="runbot.repo" optional="enabled" name="Runbot PreBuild">
+    <template id="runbot_prebuild" inherit_id="runbot.repo" customize_show="True" name="Runbot PreBuild">
         <xpath expr="//t[@t-set='head']" position="inside">
                 <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
         </xpath>
@@ -238,7 +238,7 @@
         </xpath>
     </template>
 
-    <template id="runbot_inherit_build" inherit_id="runbot.build" optional="enabled" name="Runbot Build">
+    <template id="runbot_inherit_build" inherit_id="runbot.build" customize_show="True" name="Runbot Build">
         <xpath expr="//a[1]" position="replace">
             <t t-if="repo and not team">
                 <a class="navbar-brand" t-attf-href="/runbot/repo/#{ slug(repo) }"><b><t t-esc="repo.base"/></b></a>
