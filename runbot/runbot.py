@@ -192,7 +192,6 @@ class runbot_repo(osv.osv):
             'runbot.repo', 'runbot_repo_dep_rel',
             id1='dependant_id', id2='dependency_id',
             string='Extra dependencies',
-            domain=['|',('active','=', True),('active','=', False)],
             help="Community addon repos which need to be present to run tests."),
         'token': fields.char("Github token"),
     }
