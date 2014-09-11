@@ -192,6 +192,7 @@ class runbot_repo(osv.osv):
             'runbot.repo', 'runbot_repo_dep_rel',
             id1='dependant_id', id2='dependency_id',
             string='Extra dependencies',
+            domain=['|',('active','=', True),('active','=', False)],
             help="Community addon repos which need to be present to run tests."),
         'token': fields.char("Github token"),
     }
@@ -381,7 +382,7 @@ class runbot_repo(osv.osv):
     def killall(self, cr, uid, ids=None, context=None):
         # kill switch
         Build = self.pool['runbot.build']
-        build_ids = Build.search(cr, uid, [('state', 'not in', ['done', 'pending'])])
+        build_ids = Build.search(cr, uid, [('state', 'not in', ['done', 'pending']), ('repo_id', 'in', ids)])
         Build.terminate(cr, uid, build_ids)
         Build.reap(cr, uid, build_ids)
 
@@ -498,9 +499,9 @@ class runbot_build(osv.osv):
 
         # detect duplicate
         domain = [
-            ('repo_id','=',build.repo_id.duplicate_id.id), 
-            ('name', '=', build.name), 
-            ('duplicate_id', '=', False), 
+            ('repo_id','=',build.repo_id.duplicate_id.id),
+            ('name', '=', build.name),
+            ('duplicate_id', '=', False),
             '|', ('result', '=', False), ('result', '!=', 'skipped')
         ]
         duplicate_ids = self.search(cr, uid, domain, context=context)
@@ -921,7 +922,8 @@ class runbot_build(osv.osv):
         for build in self.browse(cr, uid, ids, context=context):
             build.logger('killing %s', build.pid)
             try:
-                os.killpg(build.pid, signal.SIGKILL)
+                if not (build.pid==os.getpid() or build.pid==os.getppid() or build.pid==0):
+                    os.killpg(build.pid, signal.SIGKILL)
             except OSError:
                 pass
             build.write({'state': 'done'})
@@ -990,7 +992,7 @@ class RunbotController(http.Controller):
         repo_ids = repo_obj.search(cr, uid, [], order='id')
         repos = repo_obj.browse(cr, uid, repo_ids)
         if not repo and repos:
-            repo = repos[0] 
+            repo = repos[0]
 
         context = {
             'repos': repos,
@@ -1023,20 +1025,20 @@ class RunbotController(http.Controller):
                 branch_ids = uniq_list(sticky_branch_ids + [br[0] for br in cr.fetchall()])
 
                 build_query = """
-                    SELECT 
-                        branch_id, 
+                    SELECT
+                        branch_id,
                         max(case when br_bu.row = 1 then br_bu.build_id end),
                         max(case when br_bu.row = 2 then br_bu.build_id end),
                         max(case when br_bu.row = 3 then br_bu.build_id end),
                         max(case when br_bu.row = 4 then br_bu.build_id end)
                     FROM (
-                        SELECT 
-                            br.id AS branch_id, 
+                        SELECT
+                            br.id AS branch_id,
                             bu.id AS build_id,
                             row_number() OVER (PARTITION BY branch_id) AS row
-                        FROM 
-                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id 
-                        WHERE 
+                        FROM
+                            runbot_branch br INNER JOIN runbot_build bu ON br.id=bu.branch_id
+                        WHERE
                             br.id in %s
                         GROUP BY br.id, bu.id
                         ORDER BY br.id, bu.id DESC
