@@ -112,13 +112,13 @@ class runbot_prebuild(osv.osv):
             help='If True: Stay alive a instance ever. And check PR to main'
             ' branch and modules branches for make pre-builds\nIf False: '
             'Stay alive a instance only moment and not check PR.', copy=False),
-        'modules': fields.char("Modules to Install", size=256,
+        'modules': fields.char("Modules to Install",
             help="Empty is all modules availables", copy=True),
         'lang': fields.selection(tools.scan_languages(), 'Language',
             help='Language to change instance after of run test.', copy=True),
         'pylint_config': fields.many2one('pylint.conf',
             string='Pylint Config'),
-        'modules_to_exclude': fields.char("Modules to exclude", size=256,
+        'modules_to_exclude': fields.char("Modules to exclude",
             help='Empty is exclude none. Add modules is exclude this one. '\
             'FEATURE TODO', copy=True),
         'script_prebuild': fields.text('Script Pre-Build',
