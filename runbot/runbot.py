@@ -29,6 +29,7 @@ import openerp
 from openerp import http
 from openerp.http import request
 from openerp.osv import fields, osv
+from openerp.tools import config, appdirs
 from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 
@@ -411,7 +412,7 @@ class runbot_repo(osv.osv):
 
     def reload_nginx(self, cr, uid, context=None):
         settings = {}
-        settings['port'] = openerp.tools.config['xmlrpc_port']
+        settings['port'] = config['xmlrpc_port']
         nginx_dir = os.path.join(self.root(cr, uid), 'nginx')
         settings['nginx_dir'] = nginx_dir
         ids = self.search(cr, uid, [('nginx','=',True)], order='id')
@@ -763,6 +764,10 @@ class runbot_build(osv.osv):
 
     def pg_dropdb(self, cr, uid, dbname):
         run(['dropdb', dbname])
+        # cleanup filestore
+        datadir = appdirs.user_data_dir()
+        paths = [os.path.join(datadir, pn, 'filestore', dbname) for pn in 'OpenERP Odoo'.split()]
+        run(['rm', '-rf'] + paths)
 
     def pg_createdb(self, cr, uid, dbname):
         self.pg_dropdb(cr, uid, dbname)
@@ -801,7 +806,10 @@ class runbot_build(osv.osv):
             if grep(build.server("tools/config.py"), "no-netrpc"):
                 cmd.append("--no-netrpc")
             if grep(build.server("tools/config.py"), "log-db"):
-                cmd += ["--log-db=%s" % cr.dbname]
+                logdb = cr.dbname
+                if grep(build.server('sql_db.py'), 'allow_uri'):
+                    logdb = 'postgres://{cfg[db_user]}:{cfg[db_password]}@{cfg[db_host]}/{db}'.format(cfg=config, db=cr.dbname)
+                cmd += ["--log-db=%s" % logdb]
 
         # coverage
         #coverage_file_path=os.path.join(log_path,'coverage.pickle')
@@ -923,7 +931,6 @@ class runbot_build(osv.osv):
             # not sure, to avoid old server to check other dbs
             cmd += ["--max-cron-threads", "0"]
 
-        cmd += ['--log-level=debug']
         cmd += ['-d', "%s-all" % build.dest]
 
         if grep(build.server("tools/config.py"), "db-filter"):
@@ -1096,6 +1103,7 @@ class RunbotController(http.Controller):
         build_obj = registry['runbot.build']
         icp = registry['ir.config_parameter']
         repo_obj = registry['runbot.repo']
+        count = lambda dom: build_obj.search_count(cr, uid, dom)
 
         repo_ids = repo_obj.search(cr, uid, [], order='id')
         repos = repo_obj.browse(cr, uid, repo_ids)
@@ -1105,9 +1113,8 @@ class RunbotController(http.Controller):
         context = {
             'repos': repos,
             'repo': repo,
-            'pending_total': build_obj.search_count(cr, uid, [('state','=','pending')]),
-            'testing_total': build_obj.search_count(cr, uid, [('state','=','testing')]),
-            'running_total': build_obj.search_count(cr, uid, [('state','=','running')]),
+            'host_stats': [],
+            'pending_total': count([('state','=','pending')]),
             'limit': limit,
             'search': search,
             'refresh': refresh,
@@ -1186,12 +1193,20 @@ class RunbotController(http.Controller):
                                 branch_obj.browse(cr, uid, [branch_dependency_id], context=request.context)[0]\
                          ) \
                          for branch_id, branch_dependency_id in branch_ids ],
-                'testing': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','testing')]),
-                'running': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','running')]),
-                'pending': build_obj.search_count(cr, uid, [('repo_id','=',repo.id), ('state','=','pending')]),
+                'testing': count([('repo_id','=',repo.id), ('state','=','testing')]),
+                'running': count([('repo_id','=',repo.id), ('state','=','running')]),
+                'pending': count([('repo_id','=',repo.id), ('state','=','pending')]),
                 'qu': QueryURL('/runbot/repo/'+slug(repo), search=search, limit=limit, refresh=refresh, **filters),
                 'filters': filters,
             })
+
+        for result in build_obj.read_group(cr, uid, [], ['host'], ['host']):
+            if result['host']:
+                context['host_stats'].append({
+                    'host': result['host'],
+                    'testing': count([('state', '=', 'testing'), ('host', '=', result['host'])]),
+                    'running': count([('state', '=', 'running'), ('host', '=', result['host'])]),
+                })
 
         return request.render("runbot.repo", context)
 
