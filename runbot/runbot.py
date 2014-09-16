@@ -188,7 +188,7 @@ class runbot_repo(osv.osv):
             name = re.sub('.+@', '', repo.name)
             name = name.replace(':','/')
             result[repo.id]['base'] = name
-            regex = "(?P<host>(git@|https://)([\w\.@]+)(/|:))(?P<owner>[\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
+            regex = "(?P<host>(git@|https://)([\w\.@]+)(/|:))(?P<owner>[~\w,\-,\_]+)/(?P<repo>[\w,\-,\_]+)(.git){0,1}((/){0,1})"
             match_object = re.search( regex, repo.name )
             if match_object:
                 result[repo.id]['host'] = match_object.group("host")
@@ -201,6 +201,10 @@ class runbot_repo(osv.osv):
                 elif 'bitbucket.org' in result[repo.id]['host']:
                     result[repo.id]['host_driver'] = 'bitbucket'
                     result[repo.id]['host_url'] = 'bitbucket.org'
+                    result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
+                elif 'launchpad.net' in result[repo.id]['host']:
+                    result[repo.id]['host_driver'] = 'launchpad'
+                    result[repo.id]['host_url'] = 'launchpad.net'
                     result[repo.id]['url'] = '/'.join( [ 'https://', result[repo.id]['host_url'], result[repo.id]['owner'], result[repo.id]['repo'] ] )
                 else:
                     pass
@@ -474,6 +478,11 @@ class runbot_branch(osv.osv):
                         res[branch.id]['branch_url'] = False#ToDo: Process PR branch
                     else:
                         res[branch.id]['branch_url'] = "%s/src/?at=%s" % (branch.repo_id.url, res[branch.id]['branch_name'])
+                elif branch.repo_id.host_driver == 'launchpad':
+                    res[branch.id]['branch_url'] = branch.repo_id.name.\
+                        replace('https://code.launchpad.net/',\
+                        'http://bazaar.launchpad.net/').rstrip('/') + '/' + \
+                        branch.name + '/' + 'files'
                 else:
                     pass#Add inherit function for add more host
 
