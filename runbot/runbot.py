@@ -487,7 +487,24 @@ class runbot_branch(osv.osv):
                     pass#Add inherit function for add more host
 
             if 'branch_base_name' in field_names or 'branch_base_id' in field_names:
-                if branch.name.startswith('refs/pull/'):
+                #Start section to check branches from launchpad bzr2git
+                branch_name = self._get_branch_data(cr, uid, [branch.id], ['branch_name'], arg=arg, context=context)[branch.id]['branch_name']#No saved into database
+                regex = "(?P<branch_base>(\w|\.|\d)+)(-)(MP)(?P<mp_number>(\d)+)"
+                match_object = re.search( regex, branch_name)
+                if match_object:
+                    branch_base_name = 'refs/heads/' \
+                        + match_object.group("branch_base")
+                    branch_head_id = self.search(cr, uid, [
+                            ('repo_id.id', '=', branch.repo_id.id),
+                            ('name', '=', branch_base_name),
+                            ('id', '<>', branch.id),
+                        ], limit=1)
+                    branch_head_id = branch_head_id and branch_head_id[0] or False
+                    if branch_head_id:
+                        res[branch.id]['branch_base_id'] = branch_head_id
+                        res[branch.id]['branch_base_name'] = branch_base_name
+                #end section to check branches from launchpad bzr2git
+                elif branch.name.startswith('refs/pull/'):
                     merged = False
                     if branch.repo_id.host_driver == 'github' and branch.repo_id.token:
                         #using github for get branch_base from pr branch
