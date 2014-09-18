@@ -469,8 +469,11 @@ class runbot_branch(osv.osv):
             if 'branch_name' in field_names or 'branch_url' in field_names or 'complete_name' in field_names:
                 res[branch.id]['branch_name'] = branch.name.split('/')[-1]
 
-                res[branch.id]['complete_name'] = '/'.join( map( lambda item: item or '', \
-                [branch.repo_id.owner, branch.repo_id.repo, res[branch.id]['branch_name'] or '']))
+                owner_name = branch.repo_id.owner or os.path.basename(\
+                    os.path.dirname(branch.repo_id.name))
+                repo_name = branch.repo_id.repo or os.path.basename(branch.repo_id.name)
+                res[branch.id]['complete_name'] = '/'.join( map( lambda item: item or '',\
+                    [owner_name, repo_name, res[branch.id]['branch_name'] or '']))
 
                 if branch.repo_id.host_driver == 'github':
                     if re.match('^[0-9]+$', res[branch.id]['branch_name']):
