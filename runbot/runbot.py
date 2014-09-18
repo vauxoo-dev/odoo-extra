@@ -314,7 +314,7 @@ class runbot_repo(osv.osv):
         fmt = "%00".join(["%("+field+")" for field in fields])
         #Split in two lines to detect bzr2git heads correctly. First real head and later mp.
         git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=refname',\
-                            '--sort=-committerdate', 'refs/heads'])
+                             'refs/heads'])
         git_refs += repo.git(['for-each-ref', '--format', fmt, \
             '--sort=-committerdate', 'refs/pull'])
         git_refs = git_refs.strip()
