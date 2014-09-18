@@ -258,6 +258,11 @@ class runbot_build(osv.osv):
                     build_line.sha or build_line.branch_id.name, path)
             # move all addons to server addons path
             for module in glob.glob(build.path('addons/*')):
+                module_new_path = os.path.join( build.server('addons'), os.path.basename( module ) )
+                if os.path.isdir( module_new_path ):
+                    shutil.rmtree( module_new_path )
+                    _logger.debug('Deleting exists module "%s". Overwrite from native module' % ( module_new_path ))
+
                 shutil.move(module, build.server('addons'))
 
     def checkout(self, cr, uid, ids, context=None):
