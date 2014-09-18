@@ -312,7 +312,11 @@ class runbot_repo(osv.osv):
 
         fields = ['refname','objectname','committerdate:iso8601','authorname','subject','committername']
         fmt = "%00".join(["%("+field+")" for field in fields])
-        git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=-committerdate', 'refs/heads', 'refs/pull'])
+        #Split in two lines to detect bzr2git heads correctly. First real head and later mp.
+        git_refs = repo.git(['for-each-ref', '--format', fmt, '--sort=refname',\
+                            '--sort=-committerdate', 'refs/heads'])
+        git_refs += repo.git(['for-each-ref', '--format', fmt, \
+            '--sort=-committerdate', 'refs/pull'])
         git_refs = git_refs.strip()
 
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
