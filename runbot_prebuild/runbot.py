@@ -288,7 +288,7 @@ class runbot_build(osv.osv):
                 self.checkout_prebuild(cr, uid, [build.id], context=context)
 
     def unlink(self, cr, uid, ids, context=None):
-        '''Inherit super method to kill build before of delete it
+        '''Inherit super method unlink to kill build before of delete it
         @params
         @param cr: A database cursor
         @param uid: ID of the user currently logged in
@@ -297,6 +297,35 @@ class runbot_build(osv.osv):
         '''
         self.kill(cr, uid, ids, context=context)
         return super(runbot_build, self).unlink(cr, uid, ids, context=context)
+
+    def write(self, cr, uid, ids, vals, context=None):
+        '''Inherit super method write to kill build when change from
+        state='running' to state='done'
+        @params
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param ids: list of ids for which name should be read
+        @param context: context arguments, like lang, time zone
+        '''
+        if context is None:
+            context = {}
+        terminate_ok = context.get('terminate_ok', True)
+        if terminate_ok:
+            if 'state' in vals:
+                if vals['state'] == 'done':
+                    #Maybe this value was already assigned with state equal to "good"
+                    build_ids_to_kill = self.search(cr, uid, [
+                        ('state', 'not in', ['done', 'pending']),
+                        ('id', 'in', ids),
+                    ], context=context)
+                    #Not self.kill because this one rewrite result='killed'
+                    # and it need original state.
+                    context2 = context.copy()
+                    context2.update({'terminate_ok': False})
+                    self.terminate(cr, uid, build_ids_to_kill, context=context2)
+        res = super(runbot_build, self).write(cr, uid, ids, vals,\
+                                               context=context)
+        return res
 
 class runbot_repo(osv.osv):
     '''
