@@ -287,6 +287,17 @@ class runbot_build(osv.osv):
             else:
                 self.checkout_prebuild(cr, uid, [build.id], context=context)
 
+    def unlink(self, cr, uid, ids, context=None):
+        '''Inherit super method to kill build before of delete it
+        @params
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param ids: list of ids for which name should be read
+        @param context: context arguments, like lang, time zone
+        '''
+        self.kill(cr, uid, ids, context=context)
+        return super(runbot_build, self).unlink(cr, uid, ids, context=context)
+
 class runbot_repo(osv.osv):
     '''
     This class add the field team to assign to repo.
