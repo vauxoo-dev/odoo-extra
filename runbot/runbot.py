@@ -442,7 +442,7 @@ class runbot_repo(osv.osv):
     def killall(self, cr, uid, ids=None, context=None):
         # kill switch
         Build = self.pool['runbot.build']
-        build_ids = Build.search(cr, uid, [('state', 'not in', ['done', 'pending'])])
+        build_ids = Build.search(cr, uid, [('state', 'not in', ['done', 'pending']), ('repo_id', 'in', ids)])
         Build.terminate(cr, uid, build_ids)
         Build.reap(cr, uid, build_ids)
 
@@ -1071,7 +1071,8 @@ class runbot_build(osv.osv):
         for build in self.browse(cr, uid, ids, context=context):
             build.logger('killing %s', build.pid)
             try:
-                os.killpg(build.pid, signal.SIGKILL)
+                if not (build.pid==os.getpid() or build.pid==os.getppid() or build.pid==0):
+                    os.killpg(build.pid, signal.SIGKILL)
             except OSError:
                 pass
             build.write({'state': 'done'})
