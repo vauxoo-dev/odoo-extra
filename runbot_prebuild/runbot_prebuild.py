@@ -277,7 +277,7 @@ class runbot_prebuild(osv.osv):
                         build_line_pr_ids = build_line_pool.search(cr, uid, [
                             ('branch_id', '=', branch_pr.id),
                             ('build_id.prebuild_id', '=', prebuild.id),
-                            ('change_prebuild_ok', '<>', True),
+                            ('build_id.change_prebuild_ok', '<>', True),
                         ], context=context)
                         if build_line_pr_ids:
                             # if exist build of pr no create new one
