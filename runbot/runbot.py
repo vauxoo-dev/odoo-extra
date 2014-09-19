@@ -1080,7 +1080,13 @@ class runbot_build(osv.osv):
             self.pg_dropdb(cr, uid, "%s-base" % build.dest)
             self.pg_dropdb(cr, uid, "%s-all" % build.dest)
             if os.path.isdir(build.path()):
-                shutil.rmtree(build.path())
+                for item in os.listdir( build.path() ):
+                    path_item = os.path.join(build.path(), item)
+                    if os.path.isdir( path_item ):
+                        if item != 'logs':
+                            shutil.rmtree( path_item )
+                    elif os.path.isfile( path_item ):
+                        os.remove( path_item )
 
     def kill(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):

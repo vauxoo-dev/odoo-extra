@@ -174,11 +174,11 @@ class runbot_prebuild(osv.osv):
                     ('prebuild_id', 'in', ids),
                 ], context=context)
             if build_ids:
-                #try:
-                    #TODO: Kill active builds. First fix suicide kill
-                    #build_pool.kill()
-                #except:
-                    #pass
+                build_to_kill_ids = build_pool.search(cr, uid, [
+                    ('id', 'in', build_ids),
+                    ('state', '<>', 'done'),
+                ], context=context)
+                build_pool.kill(cr, uid, build_to_kill_ids, context=context)
                 build_pool.write(cr, uid, build_ids, {
                         'change_prebuild_ok': True,
                     }, context=context)
