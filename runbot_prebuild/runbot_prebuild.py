@@ -160,6 +160,31 @@ class runbot_prebuild(osv.osv):
             'domain': [('id', 'in', build_ids)],
         }
 
+    def write(self, cr, uid, ids, values, context=None):
+        """
+        if update data prebuild then detect it in builds
+        This will create a new build with new change 
+        into new_pr and main_build function.
+        """
+        if isinstance(ids, (long, int)):
+            ids = [ids]
+        if ids and values:
+            build_pool = self.pool.get('runbot.build')
+            build_ids = build_pool.search(cr, uid, [
+                    ('prebuild_id', 'in', ids),
+                ], context=context)
+            if build_ids:
+                #try:
+                    #TODO: Kill active builds. First fix suicide kill
+                    #build_pool.kill()
+                #except:
+                    #pass
+                build_pool.write(cr, uid, build_ids, {
+                        'change_prebuild_ok': True,
+                    }, context=context)
+        return super(runbot_prebuild, self).write(cr, uid, ids,
+            values, context=context)
+
     def create_prebuild_new_commit(self, cr, uid, ids, context=None):
         """
         Create new build with changes in your branches with
@@ -179,6 +204,7 @@ class runbot_prebuild(osv.osv):
             build_ids = build_pool.search(cr, uid, [
                 ('prebuild_id', 'in', [prebuild_id]),
                 ('from_main_prebuild_ok', '=', True),
+                ('change_prebuild_ok', '<>', True),
             ], context=context)
             if not build_ids:
                 # If not build exists then create it and mark as
@@ -250,8 +276,9 @@ class runbot_prebuild(osv.osv):
                         branch_pr_ids, context=context):
                         build_line_pr_ids = build_line_pool.search(cr, uid, [
                             ('branch_id', '=', branch_pr.id),
-                            ('build_id.prebuild_id', '=', prebuild.id)],
-                            context=context)
+                            ('build_id.prebuild_id', '=', prebuild.id),
+                            ('change_prebuild_ok', '<>', True),
+                        ], context=context)
                         if build_line_pr_ids:
                             # if exist build of pr no create new one
                             continue

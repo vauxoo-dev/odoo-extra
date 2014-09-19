@@ -205,6 +205,12 @@ class runbot_build(osv.osv):
             string='Build branches lines', readonly=False, copy=True),
         'team_id': fields.many2one('runbot.team', 'Team', help='Team of work',
             copy=True),
+        'change_prebuild_ok': fields.boolean('Change prebuild?',
+            help="True: If change prebuild after of created this build"),
+    }
+
+    _defaults = {
+        'change_prebuild_ok': False,
     }
 
     def force_schedule(self, cr, uid, ids, context=None):
