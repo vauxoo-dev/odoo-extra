@@ -297,5 +297,12 @@
         </field>
     </record>
 
+    <!--Inherit runbot qweb view-->
+    <template id="build_button_kill_build" inherit_id="runbot.build_button">
+        <xpath expr="//li[13]" position="after">
+            <li><a t-attf-href="#" t-attf-onclick="$.post('/runbot/build/{{bu['id']}}/label/1')">Kill Build</a></li>
+        </xpath>
+    </template>
+
     </data>
 </openerp>
