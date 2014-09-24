@@ -1093,7 +1093,7 @@ class runbot_build(osv.osv):
             build._log('kill', 'Kill build %s' % build.dest)
             build.terminate()
             build.write({'result': 'killed', 'job': False})
-            if build.repo_id.host_driver == 'github':
+            if build.repo_id.host_driver == 'github' and build.repo_id.token:
                 build.github_status()
 
     def reap(self, cr, uid, ids):

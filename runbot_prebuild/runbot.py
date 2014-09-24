@@ -34,6 +34,10 @@ import logging
 import glob
 
 from openerp.addons.runbot.runbot import mkdirs, decode_utf, run
+from openerp.addons.runbot.runbot import RunbotController
+from openerp import http
+from openerp.http import request
+import werkzeug
 
 _logger = logging.getLogger(__name__)
 
@@ -643,3 +647,16 @@ class runbot_repo(osv.osv):
             'domain': [('id', 'in', prebuild_ids)],
         }
 
+
+class RunbotController(RunbotController):
+
+    @http.route(['/runbot/build/<build_id>/kill'], type='http',
+                auth="public", website=True)
+    def build_kill(self, build_id, **post):
+        registry = request.registry
+        cr = request.cr
+        uid = 1
+        context = request.context
+        registry['runbot.build'].kill(cr, uid, [int(build_id)])
+        build = registry['runbot.build'].browse(cr, uid, [int(build_id)])[0]
+        return werkzeug.utils.redirect('/runbot/repo/%s' % build.repo_id.id)
