@@ -308,7 +308,7 @@ class runbot_repo(osv.osv):
             run(['git', 'clone', '--bare', repo.name, repo.path])
         else:
             repo.git(['fetch', '-p', 'origin', '+refs/heads/*:refs/heads/*'])
-            # repo.git(['fetch', '-p', 'origin', '+refs/pull/*/head:refs/pull/*'])
+            repo.git(['fetch', '-p', 'origin', '+refs/pull/*/head:refs/pull/*'])
 
         fields = ['refname','objectname','committerdate:iso8601','authorname','subject','committername']
         fmt = "%00".join(["%("+field+")" for field in fields])
@@ -1088,7 +1088,6 @@ class runbot_build(osv.osv):
                     elif os.path.isfile( path_item ):
                         os.remove( path_item )
 
-
     def kill(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
             build._log('kill', 'Kill build %s' % build.dest)
@@ -1426,7 +1425,6 @@ class RunbotController(http.Controller):
             ('ETag', retag),
         ]
         return request.render("runbot.badge_" + theme, data, headers=headers)
-
 
 # kill ` ps faux | grep ./static  | awk '{print $2}' `
 # ps faux| grep Cron | grep -- '-all'  | awk '{print $2}' | xargs kill
