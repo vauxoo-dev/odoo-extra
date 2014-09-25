@@ -238,10 +238,10 @@
         </xpath>
         <xpath expr="//td//b[@t-esc]" position="replace">
             <t t-if="br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0]">
-                <b t-esc="br['builds'][0]['build'][0].author"/>
+                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].author)}}"><b t-att-id="br['builds'][0]['build'][0].author" t-esc="br['builds'][0]['build'][0].author"/></a>
             </t>
             <t t-if="not (br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0])">
-                <b t-esc="br['branch'].branch_name"/>
+                <a t-attf-href="{{'#' + str(br['branch'].branch_name)}}"><b  t-att-id="br['branch'].branch_name" t-esc="br['branch'].branch_name"/></a>
             </t>
         </xpath>
     </template>
