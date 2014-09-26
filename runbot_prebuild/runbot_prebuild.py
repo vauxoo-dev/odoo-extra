@@ -41,6 +41,7 @@ from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 from openerp import SUPERUSER_ID
 from openerp import tools
+import urllib
 
 _logger = logging.getLogger(__name__)
 
@@ -92,6 +93,44 @@ class runbot_team(osv.Model):
         'privacy_visibility': fields.selection(
             [('public', 'Public'),
              ('private', 'Private')], 'Privacy Visibility'),
+    }
+
+
+class runbot_build(osv.osv):
+    _inherit = "runbot.build"
+
+    def _get_url_name_id(self, cr, uid, ids, fields, name, args,
+                         context=None):
+        '''
+        Documentation TODO
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param ids: list of ids for which name should be read
+        @param fields: TODO
+        @param name: TODO
+        @param args: TODO
+        @param context: context arguments, like lang, time zone
+        '''
+        if context is None:
+            context = {}
+        res = {}
+
+        for build in self.browse(cr, uid, ids, context=context):
+            res[build.id] = False
+
+            if build.prebuild_id and build.prebuild_id:
+                url_parse = urllib.quote(build.author or '')
+            else:
+                url_parse = urllib.quote(build.branch_id.branch_name or '')
+            url_parse = url_parse.replace('.', '_').replace('/', '_')
+            res[build.id] = url_parse
+        return res
+
+    _columns = {
+        'name_id': fields.function(_get_url_name_id,
+                                   string='URL Name ID',
+                                   type='char',
+                                   help='Contains the id for create href'),
     }
 
 
