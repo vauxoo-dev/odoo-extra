@@ -1137,7 +1137,7 @@ class RunbotController(http.Controller):
 
     @http.route(['/runbot', '/runbot/repo/<model("runbot.repo"):repo>'], type='http', auth="public", website=True)
     def repo(self, repo=None, search='', limit='100', refresh='', **post):
-        registry, cr, uid = request.registry, request.cr, 1
+        registry, cr, uid = request.registry, request.cr, request.uid
 
         branch_obj = registry['runbot.branch']
         build_obj = registry['runbot.build']
