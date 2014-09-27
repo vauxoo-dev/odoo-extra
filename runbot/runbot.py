@@ -1137,7 +1137,7 @@ class RunbotController(http.Controller):
 
     @http.route(['/runbot', '/runbot/repo/<model("runbot.repo"):repo>'], type='http', auth="public", website=True)
     def repo(self, repo=None, search='', limit='100', refresh='', **post):
-        registry, cr, uid = request.registry, request.cr, request.uid
+        registry, cr, uid = request.registry, request.cr, 1
 
         branch_obj = registry['runbot.branch']
         build_obj = registry['runbot.build']
@@ -1145,7 +1145,7 @@ class RunbotController(http.Controller):
         repo_obj = registry['runbot.repo']
         count = lambda dom: build_obj.search_count(cr, uid, dom)
 
-        repo_ids = repo_obj.search(cr, uid, [], order='id')
+        repo_ids = repo_obj.search(cr, request.uid, [], order='id')
         repos = repo_obj.browse(cr, uid, repo_ids)
         if not repo and repos:
             repo = repos[0]

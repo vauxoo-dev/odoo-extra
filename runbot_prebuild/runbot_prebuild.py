@@ -95,45 +95,6 @@ class runbot_team(osv.Model):
              ('private', 'Private')], 'Privacy Visibility'),
     }
 
-
-class runbot_build(osv.osv):
-    _inherit = "runbot.build"
-
-    def _get_url_name_id(self, cr, uid, ids, fields, name, args,
-                         context=None):
-        '''
-        Documentation TODO
-        @param cr: A database cursor
-        @param uid: ID of the user currently logged in
-        @param ids: list of ids for which name should be read
-        @param fields: TODO
-        @param name: TODO
-        @param args: TODO
-        @param context: context arguments, like lang, time zone
-        '''
-        if context is None:
-            context = {}
-        res = {}
-
-        for build in self.browse(cr, uid, ids, context=context):
-            res[build.id] = False
-
-            if build.prebuild_id and build.prebuild_id:
-                url_parse = urllib.quote(build.author or '')
-            else:
-                url_parse = urllib.quote(build.branch_id.branch_name or '')
-            url_parse = url_parse.replace('.', '_').replace('/', '_')
-            res[build.id] = url_parse
-        return res
-
-    _columns = {
-        'name_id': fields.function(_get_url_name_id,
-                                   string='URL Name ID',
-                                   type='char',
-                                   help='Contains the id for create href'),
-    }
-
-
 class runbot_prebuild(osv.osv):
     '''
     Object used to create a prebuild, and convert this in a build
@@ -550,7 +511,7 @@ class RunbotController(RunbotController):
         branch_obj = registry['runbot.branch']
         build_obj = registry['runbot.build']
         team_obj = registry['runbot.team']
-        team_ids = team_obj.search(cr, uid, [], order='id')
+        team_ids = team_obj.search(cr, request.uid, [], order='id')
         teams = team_obj.browse(cr, uid, team_ids)
         res.qcontext.update({'teams': teams})
         if team:
