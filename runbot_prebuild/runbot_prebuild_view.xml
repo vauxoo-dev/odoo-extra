@@ -190,9 +190,11 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='state']" position="after">
                     <field name="prebuild_id"/>
+                    <field name="team_id"/>
                 </xpath>
                 <xpath expr="//filter[@string='Status']" position="after">
                     <filter string="Prebuild" domain="[]" context="{'group_by':'prebuild_id'}"/>
+                    <filter string="Team" domain="[]" context="{'group_by':'team_id'}"/>
                 </xpath>
             </field>
         </record>
