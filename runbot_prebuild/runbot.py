@@ -38,6 +38,7 @@ from openerp.addons.runbot.runbot import RunbotController
 from openerp import http
 from openerp.http import request
 import werkzeug
+import urllib
 
 _logger = logging.getLogger(__name__)
 

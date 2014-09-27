@@ -41,7 +41,6 @@ from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 from openerp import SUPERUSER_ID
 from openerp import tools
-import urllib
 
 _logger = logging.getLogger(__name__)
 
