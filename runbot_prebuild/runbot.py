@@ -38,6 +38,7 @@ from openerp.addons.runbot.runbot import RunbotController
 from openerp import http
 from openerp.http import request
 import werkzeug
+import urllib
 
 _logger = logging.getLogger(__name__)
 
@@ -198,6 +199,33 @@ class runbot_build(osv.osv):
             self.fetch_build_lines(cr, uid, [new_id], context=context)
         return new_id
 
+    def _get_url_name_id(self, cr, uid, ids, fields, name, args,
+                         context=None):
+        '''
+        Documentation TODO
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param ids: list of ids for which name should be read
+        @param fields: TODO
+        @param name: TODO
+        @param args: TODO
+        @param context: context arguments, like lang, time zone
+        '''
+        if context is None:
+            context = {}
+        res = {}
+
+        for build in self.browse(cr, uid, ids, context=context):
+            res[build.id] = False
+
+            if build.prebuild_id and build.prebuild_id:
+                url_parse = urllib.quote(build.author or '')
+            else:
+                url_parse = urllib.quote(build.branch_id.branch_name or '')
+            url_parse = url_parse.replace('.', '_').replace('/', '_')
+            res[build.id] = url_parse
+        return res
+
     _columns = {
         'from_main_prebuild_ok': fields.boolean('', copy=True,
             help="This build was created by a main prebuild?"
@@ -211,6 +239,10 @@ class runbot_build(osv.osv):
             copy=True),
         'change_prebuild_ok': fields.boolean('Change prebuild?',
             help="True: If change prebuild after of created this build"),
+        'name_id': fields.function(_get_url_name_id,
+                                   string='URL Name ID',
+                                   type='char',
+                                   help='Contains the id for create href'),
     }
 
     _defaults = {

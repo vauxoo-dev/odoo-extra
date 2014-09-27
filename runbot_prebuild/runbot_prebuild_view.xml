@@ -190,9 +190,11 @@
             <field name="arch" type="xml">
                 <xpath expr="//field[@name='state']" position="after">
                     <field name="prebuild_id"/>
+                    <field name="team_id"/>
                 </xpath>
                 <xpath expr="//filter[@string='Status']" position="after">
                     <filter string="Prebuild" domain="[]" context="{'group_by':'prebuild_id'}"/>
+                    <filter string="Team" domain="[]" context="{'group_by':'team_id'}"/>
                 </xpath>
             </field>
         </record>
@@ -238,10 +240,10 @@
         </xpath>
         <xpath expr="//td//b[@t-esc]" position="replace">
             <t t-if="br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0]">
-                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].author)}}"><b t-att-id="br['builds'][0]['build'][0].author" t-esc="br['builds'][0]['build'][0].author"/></a>
+                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].name_id)}}"><b t-att-id="br['builds'][0]['build'][0].name_id" t-esc="br['builds'][0]['build'][0].author"/></a>
             </t>
             <t t-if="not (br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0])">
-                <a t-attf-href="{{'#' + str(br['branch'].branch_name)}}"><b  t-att-id="br['branch'].branch_name" t-esc="br['branch'].branch_name"/></a>
+                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].name_id)}}"><b  t-att-id="br['builds'][0]['build'][0].name_id" t-esc="br['branch'].branch_name"/></a>
             </t>
         </xpath>
     </template>

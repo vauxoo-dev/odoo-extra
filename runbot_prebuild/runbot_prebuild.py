@@ -94,7 +94,6 @@ class runbot_team(osv.Model):
              ('private', 'Private')], 'Privacy Visibility'),
     }
 
-
 class runbot_prebuild(osv.osv):
     '''
     Object used to create a prebuild, and convert this in a build
@@ -511,7 +510,7 @@ class RunbotController(RunbotController):
         branch_obj = registry['runbot.branch']
         build_obj = registry['runbot.build']
         team_obj = registry['runbot.team']
-        team_ids = team_obj.search(cr, uid, [], order='id')
+        team_ids = team_obj.search(cr, request.uid, [], order='id')
         teams = team_obj.browse(cr, uid, team_ids)
         res.qcontext.update({'teams': teams})
         if team:
