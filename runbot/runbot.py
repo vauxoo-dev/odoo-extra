@@ -601,7 +601,7 @@ class runbot_build(osv.osv):
         for build in self.browse(cr, uid, ids, context=context):
             nickname = dashes(build.branch_id.name.split('/')[2])[:32]
             dest = "%05d-%s-%s" % (build.id, nickname, build.name[:6])
-            r[build.id] = dashes(dest)
+            r[build.id] = dashes(dest.lower())
         return r
 
     def _get_time(self, cr, uid, ids, field_name, arg, context=None):
