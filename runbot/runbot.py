@@ -839,6 +839,8 @@ class runbot_build(osv.osv):
                 if grep(build.server('sql_db.py'), 'allow_uri'):
                     logdb = 'postgres://{cfg[db_user]}:{cfg[db_password]}@{cfg[db_host]}/{db}'.format(cfg=config, db=cr.dbname)
                 cmd += ["--log-db=%s" % logdb]
+            if grep(build.server("tools/config.py"), "max-cron-threads"):
+                cmd += ["--max-cron-threads=0"]
 
         # coverage
         #coverage_file_path=os.path.join(log_path,'coverage.pickle')
@@ -915,7 +917,7 @@ class runbot_build(osv.osv):
         cmd, mods = build.cmd()
         if grep(build.server("tools/config.py"), "test-enable"):
             cmd.append("--test-enable")
-        cmd += ['-d', '%s-base' % build.dest, '-i', 'base', '--stop-after-init', '--log-level=test', '--max-cron-threads=0']
+        cmd += ['-d', '%s-base' % build.dest, '-i', 'base', '--stop-after-init', '--log-level=test']
         return self.spawn(cmd, lock_path, log_path, cpu_limit=300)
 
     def job_20_test_all(self, cr, uid, build, lock_path, log_path):
@@ -924,7 +926,7 @@ class runbot_build(osv.osv):
         cmd, mods = build.cmd()
         if grep(build.server("tools/config.py"), "test-enable"):
             cmd.append("--test-enable")
-        cmd += ['-d', '%s-all' % build.dest, '-i', mods, '--stop-after-init', '--log-level=test', '--max-cron-threads=0']
+        cmd += ['-d', '%s-all' % build.dest, '-i', mods, '--stop-after-init', '--log-level=test']
         # reset job_start to an accurate job_20 job_time
         build.write({'job_start': now()})
         return self.spawn(cmd, lock_path, log_path, cpu_limit=2100)
@@ -955,10 +957,11 @@ class runbot_build(osv.osv):
         if os.path.exists(build.server('addons/im_livechat')):
             cmd += ["--workers", "2"]
             cmd += ["--longpolling-port", "%d" % (build.port + 1)]
-            cmd += ["--max-cron-threads", "1"]
-        else:
-            # not sure, to avoid old server to check other dbs
-            cmd += ["--max-cron-threads", "0"]
+            try:
+                cmd.remove("--max-cron-threads=0")
+                cmd += ["--max-cron-threads=1"]
+            except ValueError:
+                pass
 
         cmd += ['-d', "%s-all" % build.dest]
 
