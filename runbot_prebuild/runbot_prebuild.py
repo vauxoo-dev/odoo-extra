@@ -115,8 +115,9 @@ class runbot_prebuild(osv.osv):
             help="Empty is all modules availables", copy=True),
         'lang': fields.selection(tools.scan_languages(), 'Language',
             help='Language to change instance after of run test.', copy=True),
-        'pylint_config': fields.many2one('pylint.conf',
-            string='Pylint Config'),
+        'pylint_conf_path': fields.char('Pylint conf path',
+                                        help='Relative path to pylint'
+                                        ' conf file'),
         'modules_to_exclude': fields.char("Modules to exclude",
             help='Empty is exclude none. Add modules is exclude this one. '\
             'FEATURE TODO', copy=True),
@@ -371,8 +372,7 @@ class runbot_prebuild(osv.osv):
                     prebuild.team_id.id or False,
                 'line_ids': build_line_datas,
                 'lang': prebuild.lang,
-                'pylint_config': prebuild.pylint_config and\
-                    prebuild.pylint_config.id or False,
+                'pylint_conf_path': prebuild.pylint_conf_path,
             }
             build_info.update(default_data or {})
             _logger.info(

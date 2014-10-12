@@ -363,6 +363,33 @@ class runbot_build(osv.osv):
                                                context=context)
         return res
 
+    def get_repo_branch_name(self, cr, uid, ids, context=None):
+        """
+        This method inherit to get all repo id and branch name
+            from a build.
+        Include new build line data from prebuild.
+        return dict {repo.id = branch_name}
+        """
+        if not ids:
+            return True
+        if isinstance(ids, (int, long)):
+            ids = [ids]
+        repo_branch_data = {}
+        for build in self.browse(cr, uid, ids, context=context):
+            if build.prebuild_id:
+                for build_line in build.line_ids:
+                    if build_line.repo_id.check_pylint:
+                        repo_branch_data[build_line.repo_id.id] =\
+                            build_line.sha
+            else:
+                repo_branch_data.update(
+                    super(runbot_build, self).get_repo_branch_name(
+                        cr, uid, [build.id], context=context
+                    )
+                )
+        return repo_branch_data
+
+
 class runbot_repo(osv.osv):
     '''
     This class add the field team to assign to repo.
