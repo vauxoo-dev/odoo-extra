@@ -22,7 +22,18 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-import runbot
-import runbot_prebuild
-import wizard
+from openerp.osv import osv, fields
+
+class wizard_kill_builds(osv.osv_memory):
+    _name = 'wizard.kill.builds'
+    
+    def kill_builds(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        build_obj = self.pool.get('runbot.build')
+        build_obj.kill(cr, uid, context.get('active_ids', []), context=context)
+        return {}
+        
+    
+    
 

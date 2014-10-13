@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_wizard_kill_builds" model="ir.ui.view">
+            <field name="name">view.wizard.kill.builds</field>
+            <field name="model">wizard.kill.builds</field>
+            <field name="arch" type="xml">
+                <form string="Kill Builds">
+                    <footer>
+                        <button string="Apply" type="object" name="kill_builds" class="oe_highlight"/>
+                        or
+                        <button string="Cancel" special="cancel" class="oe_link"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+        
+        <record id="action_wizard_kill_builds" model="ir.actions.act_window">
+            <field name="name">Kill Builds</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">wizard.kill.builds</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="view_id" ref="view_wizard_kill_builds"/>
+            <field name="target">new</field>
+            <field name="multi"></field>
+        </record>
+        
+        <act_window name="Kill Builds"
+            res_model="wizard.kill.builds"
+            src_model="runbot.build"
+            view_mode="form"
+            target="new"
+            key2="client_action_multi"
+            id="act_wizard_kill_builds"
+            />
+
+    </data>
+</openerp>

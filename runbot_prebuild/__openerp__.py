@@ -34,6 +34,7 @@
     'data': [
         'security/runbot_team_security.xml',
         'security/ir.model.access.csv',
+        'wizard/wizard_kill_builds.xml',
         'runbot_prebuild_view.xml',
     ],
     'installable': True,
