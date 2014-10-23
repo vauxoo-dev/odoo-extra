@@ -7,6 +7,15 @@
             <field name="model">wizard.kill.builds</field>
             <field name="arch" type="xml">
                 <form string="Kill Builds">
+                    <group>
+                        <field name="build_ids">
+                            <tree string="Buils to kill">
+                                <field name="repo_id"/>
+                                <field name="branch_id"/>
+                                <field name="team_id"/>
+                            </tree>
+                        </field>
+                    </group>
                     <footer>
                         <button string="Apply" type="object" name="kill_builds" class="oe_highlight"/>
                         or

@@ -24,16 +24,47 @@
 #
 from openerp.osv import osv, fields
 
+
 class wizard_kill_builds(osv.osv_memory):
     _name = 'wizard.kill.builds'
-    
+
+    def default_get(self, cr, uid, fields_list, context=None):
+        """
+        Get default values
+        @param self: The object pointer.
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param fields_list: List of fields for default value
+        @param context: A standard dictionary
+        @return: default values of fields
+        """
+        if context is None:
+            context = {}
+        res = super(wizard_kill_builds, self).default_get(
+            cr, uid, fields_list, context=context)
+        if context.get('active_ids', False):
+            res.update({'build_ids': context.get('active_ids')})
+        return res
+
+    _columns = {
+        'build_ids': fields.many2many(
+            'runbot.build', 'wizard_kill_buids_ids', 'wizard_id', 'buids_id',
+            'Builds to kill', help='This buids will killed')
+    }
+
     def kill_builds(self, cr, uid, ids, context=None):
+        '''
+        Method to call method kill from runbot build
+        @param self: The object pointer.
+        @param cr: A database cursor
+        @param uid: ID of the user currently logged in
+        @param ids: Id of wizard that call this method
+        @param context: A standard dictionary
+        '''
         if context is None:
             context = {}
         build_obj = self.pool.get('runbot.build')
-        build_obj.kill(cr, uid, context.get('active_ids', []), context=context)
+        for wiz in self.browse(cr, uid, ids, context=context):
+            buids_ids = [x.id for x in wiz.build_ids]
+            build_obj.kill(cr, uid, buids_ids, context=context)
         return {}
-        
-    
-    
-
