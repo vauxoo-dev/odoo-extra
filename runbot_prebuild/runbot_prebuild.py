@@ -403,7 +403,7 @@ class runbot_build_line(osv.osv):
                 fields=['refname', 'objectname', 'committerdate:iso8601',
                         'authorname', 'subject', 'committername'],
                 rename_fields=['refname', 'sha', 'date', 'author', 'subject',
-                    'committername'], context=context)[line.repo_id.id][0]
+                    'committername'], context=context)[line.repo_id.id][0]# TODO: remove indexError when you remove branch of a git repo.
             if line.sha and line.sha != refs['sha']:
                 refs.update({'reason_ok': True})
             self.write(cr, uid, [line.id], refs, context=context)
