@@ -491,7 +491,7 @@ class RunbotController(RunbotController):
                  '/runbot/repo/<model("runbot.repo"):repo>',
                  '/runbot/team/<model("runbot.team"):team>'],
                 type='http', auth="public", website=True)
-    def repo(self, repo=None, team=None, search='', limit='100', refresh='',
+    def repo(self, repo=None, team=None, search='', limit='30', refresh='',
         **post):
         '''
         Documentation TODO
