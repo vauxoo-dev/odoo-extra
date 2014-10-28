@@ -650,7 +650,7 @@ class RunbotController(RunbotController):
                 '/runbot/team/%s' % build_brw.team_id.id)
         else:
             return res
-
+    """
     @http.route(['/runbot/build/<build_id>/label/<label_id>'], type='http',
         auth="public", method='POST')
     def toggle_label(self, build_id=None, label_id=None, search=None, **post):
@@ -673,3 +673,4 @@ class RunbotController(RunbotController):
                 '/runbot/team/%s' % build_brw.team_id.id)
         else:
             return res
+    """
