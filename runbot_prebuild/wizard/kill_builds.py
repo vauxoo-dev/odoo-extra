@@ -28,8 +28,7 @@ from openerp.osv import osv, fields
 class wizard_kill_builds(osv.osv_memory):
     _name = 'wizard.kill.builds'
 
-    def default_get(self, cr, uid,
-                    fields_list, context=None):  # pylint: disable=W0221
+    def default_get(self, cr, uid, fields_list, context=None):  # pylint: disable=W0221
         """
         Get default values
         @param self: The object pointer.
