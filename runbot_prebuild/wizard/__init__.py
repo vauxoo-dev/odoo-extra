@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- encoding: utf-8 -*-
 #
 #    Module Writen to OpenERP, Open Source Management Solution
@@ -23,19 +22,5 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-{
-    'name': 'Runbot Pre Build',
-    'category': 'Website',
-    'summary': 'Runbot',
-    'version': '1.1',
-    'description': "Runbot with posibility to make pre-build",
-    'author': 'Vauxoo',
-    'depends': ['runbot', 'runbot_language', 'runbot_pylint'],
-    'data': [
-        'security/runbot_team_security.xml',
-        'security/ir.model.access.csv',
-        'wizard/wizard_kill_builds.xml',
-        'runbot_prebuild_view.xml',
-    ],
-    'installable': True,
-}
+from . import kill_builds
+
