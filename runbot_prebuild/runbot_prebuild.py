@@ -403,10 +403,14 @@ class runbot_build_line(osv.osv):
                 fields=['refname', 'objectname', 'committerdate:iso8601',
                         'authorname', 'subject', 'committername'],
                 rename_fields=['refname', 'sha', 'date', 'author', 'subject',
-                    'committername'], context=context)[line.repo_id.id][0]
-            if line.sha and line.sha != refs['sha']:
-                refs.update({'reason_ok': True})
-            self.write(cr, uid, [line.id], refs, context=context)
+                    'committername'], context=context)[line.repo_id.id]
+            refs = len(refs) >= 1 and refs[0] or False
+            if refs:
+                if line.sha and line.sha != refs['sha']:
+                    refs.update({'reason_ok': True})
+                self.write(cr, uid, [line.id], refs, context=context)
+            else:
+               pass  # TODO: Add log msg of ref deleted from git repo
         return True
 
     def _get_url_commit(self, cr, uid, ids, fields, name, args, context=None):
