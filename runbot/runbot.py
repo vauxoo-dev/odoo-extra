@@ -1151,7 +1151,8 @@ class RunbotController(http.Controller):
         repo_obj = registry['runbot.repo']
         count = lambda dom: build_obj.search_count(cr, uid, dom)
 
-        repo_ids = repo_obj.search(cr, request.uid, [], order='id')
+        repo_ids = repo_obj.search(cr, request.uid, [], order='id', limit=1)# Needs just one runbot.repo in qweb view to work fine with prebuilds
+        repo_ids += repo_obj.search(cr, request.uid, [('auto', '=', True)], order='id')# Show only repo with auto=True (works without prebuild)
         repos = repo_obj.browse(cr, uid, repo_ids)
         if not repo and repos:
             repo = repos[0]
