@@ -71,12 +71,19 @@ def grep(filename, string):
         return open(filename).read().find(string) != -1
     return False
 
-def rfind(filename, pattern):
+def rfind(filename, pattern, excludes=None):
     """Determine in something in filename matches the pattern"""
+    if excludes is None:
+        excludes = []
     if os.path.isfile(filename):
         regexp = re.compile(pattern, re.M)
         with open(filename, 'r') as f:
-            if regexp.findall(f.read()):
+            data = ""
+            for line in f.readlines():
+                if any([exclude in line for exclude in excludes]):
+                    continue
+                data += line
+            if regexp.findall(data):
                 return True
     return False
 
@@ -942,7 +949,7 @@ class runbot_build(osv.osv):
         if grep(log_all, ".modules.loading: Modules loaded."):
             if rfind(log_all, _re_error):
                 v['result'] = "ko"
-            elif rfind(log_all, _re_warning):
+            elif rfind(log_all, _re_warning, excludes=["no translation for language"]):
                 v['result'] = "warn"
             elif not grep(build.server("test/common.py"), "post_install") or grep(log_all, "Initiating shutdown."):
                 v['result'] = "ok"
