@@ -949,7 +949,7 @@ class runbot_build(osv.osv):
         if grep(log_all, ".modules.loading: Modules loaded."):
             if rfind(log_all, _re_error):
                 v['result'] = "ko"
-            elif rfind(log_all, _re_warning, excludes=["no translation for language"]):
+            elif rfind(log_all, _re_warning, excludes=["no translation for language", "Unable to get information for locale"]):
                 v['result'] = "warn"
             elif not grep(build.server("test/common.py"), "post_install") or grep(log_all, "Initiating shutdown."):
                 v['result'] = "ok"
