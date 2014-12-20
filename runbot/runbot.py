@@ -912,7 +912,7 @@ class runbot_build(osv.osv):
                 _logger.debug("github status %s update to %s", build.name, state)
             except Exception:
                 _logger.exception("github status error")
-
+    """
     def job_10_test_base(self, cr, uid, build, lock_path, log_path):
         build._log('test_base', 'Start test base module')
         if build.repo_id.host_driver == 'github':
@@ -926,9 +926,14 @@ class runbot_build(osv.osv):
             cmd.append("--test-enable")
         cmd += ['-d', '%s-base' % build.dest, '-i', 'base', '--stop-after-init', '--log-level=test']
         return self.spawn(cmd, lock_path, log_path, cpu_limit=300)
-
+    """
     def job_20_test_all(self, cr, uid, build, lock_path, log_path):
         build._log('test_all', 'Start test all modules')
+        if build.repo_id.host_driver == 'github':
+            build.github_status()
+        # checkout source
+        build.checkout()
+        # run base test
         self.pg_createdb(cr, uid, "%s-all" % build.dest)
         cmd, mods = build.cmd()
         if grep(build.server("tools/config.py"), "test-enable"):
