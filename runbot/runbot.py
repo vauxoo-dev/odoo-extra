@@ -845,6 +845,7 @@ class runbot_build(osv.osv):
                 server_path,
                 "--no-xmlrpcs",
                 "--xmlrpc-port=%d" % build.port,
+                "--addons-path=%s" % build.server('addons'),
             ]
             # options
             if grep(build.server("tools/config.py"), "no-netrpc"):
