@@ -32,6 +32,7 @@ from openerp.osv import fields, osv
 from openerp.tools import config, appdirs
 from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
+from openerp.service.db import exp_drop, _create_empty_database
 
 _logger = logging.getLogger(__name__)
 
@@ -265,7 +266,9 @@ class runbot_repo(osv.osv):
         for repo in self.browse(cr, uid, ids, context=context):
             cmd = ['git', '--git-dir=%s' % repo.path] + cmd
             _logger.info("git: %s", ' '.join(cmd))
-            return subprocess.check_output(cmd)
+            try:
+                return subprocess.check_output(cmd)
+            except: return None
 
     def git_export(self, cr, uid, ids, treeish, dest, context=None):
         for repo in self.browse(cr, uid, ids, context=context):
@@ -799,7 +802,11 @@ class runbot_build(osv.osv):
                     )
 
     def pg_dropdb(self, cr, uid, dbname):
-        run(['dropdb', dbname])
+        #run(['dropdb', dbname])
+        try:
+           exp_drop(dbname)
+       except Exception, e:
+           pass
         # cleanup filestore
         datadir = appdirs.user_data_dir()
         paths = [os.path.join(datadir, pn, 'filestore', dbname) for pn in 'OpenERP Odoo'.split()]
@@ -808,7 +815,8 @@ class runbot_build(osv.osv):
     def pg_createdb(self, cr, uid, dbname):
         self.pg_dropdb(cr, uid, dbname)
         _logger.debug("createdb %s", dbname)
-        run(['createdb', '--encoding=unicode', '--lc-collate=C', '--template=template0', dbname])
+        #run(['createdb', '--encoding=unicode', '--lc-collate=C', '--template=template0', dbname])
+       _create_empty_database(dbname)
 
     def cmd(self, cr, uid, ids, context=None):
         """Return a list describing the command to start the build"""
