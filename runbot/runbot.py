@@ -804,9 +804,9 @@ class runbot_build(osv.osv):
     def pg_dropdb(self, cr, uid, dbname):
         #run(['dropdb', dbname])
         try:
-           exp_drop(dbname)
-       except Exception, e:
-           pass
+            exp_drop(dbname)
+        except Exception, e:
+            pass
         # cleanup filestore
         datadir = appdirs.user_data_dir()
         paths = [os.path.join(datadir, pn, 'filestore', dbname) for pn in 'OpenERP Odoo'.split()]
@@ -816,7 +816,7 @@ class runbot_build(osv.osv):
         self.pg_dropdb(cr, uid, dbname)
         _logger.debug("createdb %s", dbname)
         #run(['createdb', '--encoding=unicode', '--lc-collate=C', '--template=template0', dbname])
-       _create_empty_database(dbname)
+        _create_empty_database(dbname)
 
     def cmd(self, cr, uid, ids, context=None):
         """Return a list describing the command to start the build"""
