@@ -846,7 +846,11 @@ class runbot_build(osv.osv):
                 "--no-xmlrpcs",
                 "--xmlrpc-port=%d" % build.port,
                 "--addons-path=%s" % build.server('addons'),
-                "--without-demo=False",
+                #"--without-demo=False",
+                "-r %s" % config['db_user'],
+                "-w %s" % config['db_password'] ,
+                "--db_host=%s" % config['db_host'],
+                #"--db_port=%s" % config['db_port'],
             ]
             # options
             if grep(build.server("tools/config.py"), "no-netrpc"):
