@@ -178,7 +178,7 @@ class runbot_prebuild(osv.osv):
                     ('id', 'in', build_ids),
                     ('state', '<>', 'done'),
                 ], context=context)
-                build_pool.kill(cr, uid, build_to_kill_ids, context=context)
+                #build_pool.kill(cr, uid, build_to_kill_ids, context=context)
                 build_pool.write(cr, uid, build_ids, {
                         'change_prebuild_ok': True,
                     }, context=context)

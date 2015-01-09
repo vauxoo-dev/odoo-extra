@@ -847,11 +847,22 @@ class runbot_build(osv.osv):
                 "--xmlrpc-port=%d" % build.port,
                 "--addons-path=%s" % build.server('addons'),
                 #"--without-demo=False",
-                "-r %s" % config['db_user'],
-                "-w %s" % config['db_password'] ,
-                "--db_host=%s" % config['db_host'],
+                #"-r %s" % config['db_user'],
+                #"-w %s" % config['db_password'] ,
+                #"--db_host=%s" % config['db_host'],
                 #"--db_port=%s" % config['db_port'],
             ]
+	    #import pdb;pdb.set_trace()
+            if config['db_user'] and config['db_user'] != 'False':
+                import getpass
+		if config['db_user'] != getpass.getuser():
+		    cmd.append("-r %s" % config['db_user'])
+	    if config['db_password'] and config['db_password'] != 'False':
+                cmd.append("-w %s" % config['db_password'])
+	    if config['db_host'] and config['db_host'] != 'False':
+                cmd.append("--db_host=%s" % config['db_host'])
+            if config['db_port'] and config['db_port'] != 'False':
+                cmd.append("--db_port=%s" % config['db_port'])
             # options
             if grep(build.server("tools/config.py"), "no-netrpc"):
                 cmd.append("--no-netrpc")
@@ -886,6 +897,7 @@ class runbot_build(osv.osv):
             os.closerange(3, os.sysconf("SC_OPEN_MAX"))
             lock(lock_path)
         out=open(log_path,"w")
+        out.write("\ncmd: %s\n" % cmd)
         _logger.debug("spawn: %s stdout: %s", ' '.join(cmd), log_path)
         if showstderr:
             stderr = out
