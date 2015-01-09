@@ -961,6 +961,8 @@ class runbot_build(osv.osv):
         # adjust job_end to record an accurate job_20 job_time
         build._log('run', 'Start running build %s' % build.dest)
         log_all = build.path('logs', 'job_20_test_all.txt')
+        if not os.path.isfile(log_all):
+            open(log_all, "w").write("created manually :( because is unexists.")
         log_time = time.localtime(os.path.getmtime(log_all))
         v = {
             'job_end': time.strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT, log_time),
