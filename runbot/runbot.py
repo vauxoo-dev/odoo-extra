@@ -72,19 +72,29 @@ def grep(filename, string):
         return open(filename).read().find(string) != -1
     return False
 
-def rfind(filename, pattern, excludes=None):
+def rfind(filename, pattern, excludes=None, excludes_wtraceback=None, error_count_expected=None):
     """Determine in something in filename matches the pattern"""
     if excludes is None:
         excludes = []
+    if error_count_expected is None:
+        error_count_expected = 0
     if os.path.isfile(filename):
         regexp = re.compile(pattern, re.M)
         with open(filename, 'r') as f:
             data = ""
+            exclude_next_traceback = True
             for line in f.readlines():
+                if exclude_next_traceback and "Traceback (most recent call last):" in line:
+                    exclude_next_traceback = False
+                    continue
                 if any([exclude in line for exclude in excludes]):
                     continue
+                if any([exclude_wtraceback in line for exclude_wtraceback in excludes_wtraceback]):
+                    exclude_next_traceback = True
+                    continue
                 data += line
-            if regexp.findall(data):
+            error_list = regexp.findall(data)
+            if len(error_list) != error_count_expected:
                 return True
     return False
 
@@ -982,7 +992,12 @@ class runbot_build(osv.osv):
             'job_end': time.strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT, log_time),
         }
         if grep(log_all, ".modules.loading: Modules loaded."):
-            if rfind(log_all, _re_error):
+            if rfind(log_all, _re_error,
+                     excludes_wtraceback=[
+                        # We have this false error into 8.0 with new server. TODO: Fix this error
+                        "openerp.addons.base.ir.ir_mail_server: Mail delivery failed via SMTP server 'localhost'.",
+                        "openerp.addons.mail.mail_mail: failed sending mail.mail",
+                     ]):
                 v['result'] = "ko"
             elif rfind(log_all, _re_warning, excludes=["no translation for language", "Unable to get information for locale"]):
                 v['result'] = "warn"
