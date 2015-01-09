@@ -79,7 +79,7 @@ def rfind(filename, pattern, excludes=None, excludes_wtraceback=None, error_coun
     if error_count_expected is None:
         error_count_expected = 0
     if excludes_wtraceback is None:
-       excludes_wtraceback = []
+        excludes_wtraceback = []
     if os.path.isfile(filename):
         regexp = re.compile(pattern, re.M)
         with open(filename, 'r') as f:
