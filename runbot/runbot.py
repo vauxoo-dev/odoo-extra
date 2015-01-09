@@ -856,9 +856,9 @@ class runbot_build(osv.osv):
             if config['db_user'] and config['db_user'] != 'False':
                 import getpass
 		if config['db_user'] != getpass.getuser():
-		    cmd.append("-r %s" % config['db_user'])
+		    cmd.extend(["-r", config['db_user']])
 	    if config['db_password'] and config['db_password'] != 'False':
-                cmd.append("-w %s" % config['db_password'])
+                cmd.extend(["-w", config['db_password']])
 	    if config['db_host'] and config['db_host'] != 'False':
                 cmd.append("--db_host=%s" % config['db_host'])
             if config['db_port'] and config['db_port'] != 'False':
