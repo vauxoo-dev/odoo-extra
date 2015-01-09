@@ -555,7 +555,7 @@ class runbot_repo(osv.osv):
                              for prebuild_line_data in prebuild_line_datas]))
         return repo_ids
 
-    def update(self, cr, uid, ids, context=None):
+    def update(self, cr, uid, ids=None, context=None):
         '''
         Documentation TODO
         @params
@@ -567,7 +567,8 @@ class runbot_repo(osv.osv):
         # All active repo get last version and new branches
         if context is None:
             context = {}
-
+	if ids is None:
+	    ids = []
         # Clone first time of all branches
         context2 = context.copy()
         context2.update({'clone_only': True})

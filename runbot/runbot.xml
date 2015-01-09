@@ -679,9 +679,9 @@ http {
       </svg>
     </template>
 
-    <!-- Cron -->
+    <!-- Cron schedule-->
     <record model="ir.cron" id="repo_cron">
-        <field name='name'>Runbot Cron</field>
+        <field name='name'>Runbot Cron Schedule</field>
         <field name='interval_number'>1</field>
         <field name='interval_type'>minutes</field>
         <field name="numbercall">-1</field>
@@ -690,6 +690,16 @@ http {
         <field name="function">cron</field>
         <field name="args">()</field>
     </record>
-
+    <!-- Cron update -->
+    <record model="ir.cron" id="repo_cron_update">
+        <field name='name'>Runbot Cron Update</field>
+        <field name='interval_number'>1</field>
+        <field name='interval_type'>minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="doall" eval="False" />
+        <field name="model">runbot.repo</field>
+        <field name="function">update</field>
+        <field name="args">()</field>
+    </record>
 </data>
 </openerp>

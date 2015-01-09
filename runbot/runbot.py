@@ -299,7 +299,9 @@ class runbot_repo(osv.osv):
                 response = session.get(url)
             return response.json()
 
-    def update(self, cr, uid, ids, context=None):
+    def update(self, cr, uid, ids=None, context=None):
+        if ids is None:
+	    ids = self.search(cr, uid, [('auto', '=', True)], context=context)
         for repo in self.browse(cr, uid, ids, context=context):
             self.update_git(cr, uid, repo, context=context)
 
@@ -454,7 +456,7 @@ class runbot_repo(osv.osv):
 
     def cron(self, cr, uid, ids=None, context=None):
         ids = self.search(cr, uid, [('auto', '=', True)], context=context)
-        self.update(cr, uid, ids, context=context)
+        #self.update(cr, uid, ids, context=context)  #Created by other cron
         self.scheduler(cr, uid, ids, context=context)
         self.reload_nginx(cr, uid, context=context)
 
