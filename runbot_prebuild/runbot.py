@@ -620,9 +620,7 @@ class runbot_repo(osv.osv):
             cr, uid, ids, context=context)
         repo_fetched_ids = self.fetch_git(
             cr, uid, repo_sticky_ids, context=context)
-        repo_cloned_ids = []
-        repo_fetched_ids = self.fetch_git(
-            cr, uid, ids, context=context)
+
         # Create new branches from previous fetch and clone
         repo_ids = list(set(repo_cloned_ids + repo_fetched_ids))
         new_branch_ids = self.create_branches(
