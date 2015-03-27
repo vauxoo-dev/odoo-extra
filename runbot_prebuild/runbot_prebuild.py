@@ -287,6 +287,7 @@ class runbot_prebuild(osv.osv):
                         replace_branch_info = {prebuild_line.branch_id.id: {
                             'branch_id': branch_pr.id,
                             'reason_ok': True,
+                            'reason_pr_ok': True,
                         }}
                         new_name = prebuild.name + \
                             ' [' + branch_pr.complete_name + ']'
@@ -482,6 +483,8 @@ class runbot_build_line(osv.osv):
         'reason_ok': fields.boolean('Reason',
             help='This line is the reason of create the complete build.'\
             '\nReason of PR or reason of new commit.', copy=False),
+        'reason_pr_ok': fields.boolean('Reason PR',
+            help='This line is the PR branch', copy=True),
         'short_sha': fields.function(_get_short_commit, string='Short Commit',
             type='char', help='Sha short commit. Last 7 chars'),
     }
