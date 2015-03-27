@@ -389,6 +389,44 @@ class runbot_build(osv.osv):
                 )
         return repo_branch_data
 
+    def github_status_prebuild(self, cr, uid, ids, context=None):
+        runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
+        for build in self.browse(cr, uid, ids, context=context):
+            if not build.change_prebuild_ok:
+               for build_line in build.line_ids:
+                    if build_line.reason_pr_ok:
+                        desc = "runbot build %s - from prebuild %s" % (build.dest, build.prebuild_id.name)
+                        if build.state == 'testing':
+                            state = 'pending'
+                        elif build.state in ('running', 'done'):
+                            state = 'error'
+                            if build.result == 'ok':
+                                state = 'success'
+                            if build.result == 'ko':
+                                state = 'failure'
+                            desc += " (runtime %ss)" % (build.job_time,)
+                        else:
+                            continue
+                        status = {
+                            "state": state,
+                            "target_url": "http://%s/runbot/build/%s" % (runbot_domain, build.id),
+                            "description": desc,
+                            "context": "ci/runbot%s" % (build.prebuild_id.id),
+                        }
+                        _logger.debug("github updating status %s to %s", build.name, state)
+                        build_line.branch_id.repo_id.github('/repos/:owner/:repo/statuses/%s' % build_line.sha, status)
+        return True
+
+
+    def github_status(self, cr, uid, ids, context=None):
+        build_from_prebuild_ids =  [build.id for build in self.browse(cr, uid, ids, context=context) if build.prebuild_id]
+        build_not_prebuild_ids = []
+        for build_id in ids:
+            if build_id not in build_from_prebuild_ids:
+                build_not_prebuild_ids.append(build_id)
+        self.github_status_prebuild(cr, uid, build_from_prebuild_ids, context=context)
+        return super(runbot_build, self).github_status(cr, uid, build_not_prebuild_ids, context=context)
+
 
 class runbot_repo(osv.osv):
     '''
@@ -567,8 +605,8 @@ class runbot_repo(osv.osv):
         # All active repo get last version and new branches
         if context is None:
             context = {}
-	if ids is None:
-	    ids = []
+        if ids is None:
+            ids = []
         # Clone first time of all branches
         context2 = context.copy()
         context2.update({'clone_only': True})
