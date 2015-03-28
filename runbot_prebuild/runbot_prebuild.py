@@ -340,6 +340,7 @@ class runbot_prebuild(osv.osv):
         if default_data is None:
             default_data = {}
         build_obj = self.pool.get('runbot.build')
+        branch_obj = self.pool.get('runbot.branch')
         build_ids = []
         for prebuild in self.browse(cr, uid, ids, context=context):
             # Update repository but no create default build
@@ -350,9 +351,14 @@ class runbot_prebuild(osv.osv):
                     prebuild_line.branch_id.id, {}) or {}
                 branch_id = new_branch_info.pop(
                     'branch_id', False) or prebuild_line.branch_id.id
+                branch_is_pr = False
+                branch_name = branch_obj.read(cr, uid, [branch_id], ['name'])[0]['name']
+                if 'refs/pull/' in branch_name:
+                    branch_is_pr = True
                 new_branch_info.update({
                     'branch_id': branch_id,
                     'prebuild_line_id': prebuild_line.id,
+                    'reason_pr_ok': branch_is_pr,
                 })
 
                 build_line_datas.append((0, 0, new_branch_info))
