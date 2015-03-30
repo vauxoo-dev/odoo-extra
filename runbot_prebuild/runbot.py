@@ -394,7 +394,7 @@ class runbot_build(osv.osv):
         for build in self.browse(cr, uid, ids, context=context):
             if not build.change_prebuild_ok:
                for build_line in build.line_ids:
-                    if build_line.reason_pr_ok:
+                    if build_line.reason_pr_ok and build_line.create_status_ok:
                         desc = "runbot build %s - from prebuild %s" % (build.dest, build.prebuild_id.name)
                         if build.state == 'testing':
                             state = 'pending'

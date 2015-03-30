@@ -74,6 +74,10 @@ class runbot_prebuild_branch(osv.osv):
         'repo_id': fields.related('branch_id', 'repo_id', type="many2one",
             relation="runbot.repo", string="Repository", readonly=True,
             store=True, ondelete='cascade', select=1),
+        'create_status_ok': fields.boolean('Create Status',
+            help='If is True, this will create a status '
+                 'of build in github. More info here: '
+                 'https://developer.github.com/v3/repos/statuses/#create-a-status'),
     }
 
 
@@ -359,6 +363,7 @@ class runbot_prebuild(osv.osv):
                     'branch_id': branch_id,
                     'prebuild_line_id': prebuild_line.id,
                     'reason_pr_ok': branch_is_pr,
+                    'create_status_ok': prebuild_line.create_status_ok,
                 })
 
                 build_line_datas.append((0, 0, new_branch_info))
@@ -493,6 +498,10 @@ class runbot_build_line(osv.osv):
             help='This line is the PR branch', copy=True),
         'short_sha': fields.function(_get_short_commit, string='Short Commit',
             type='char', help='Sha short commit. Last 7 chars'),
+        'create_status_ok': fields.boolean('Create Status',
+                    help='If is True, this will create a status '
+                                     'of build in github. More info here: '
+                                                      'https://developer.github.com/v3/repos/statuses/#create-a-status'),
     }
 
 class RunbotController(RunbotController):

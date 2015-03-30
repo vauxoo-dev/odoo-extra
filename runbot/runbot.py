@@ -924,6 +924,7 @@ class runbot_build(osv.osv):
         """Notify github of failed/successful builds"""
         runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
+            continue  # Temp to force use from inherit method of prebuild
             if build.repo_id.host_driver != 'github':
                 raise Exception('Repository does not have a driver to use github')
             if build.state != 'duplicate' and build.duplicate_id:
