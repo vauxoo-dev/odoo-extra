@@ -12,6 +12,7 @@
                             <field name="branch_id"/>
                             <field name="check_pr"/>
                             <field name="check_new_commit"/>
+                            <field name="create_status_ok"/>
                             <field name="sha"/>
                             <field name="repo_id"/>
                         </group>
@@ -26,6 +27,7 @@
                     <field name="branch_id"/>
                     <field name="check_pr"/>
                     <field name="check_new_commit"/>
+                    <field name="create_status_ok"/>
                     <field name="sha"/>
                     <field name="repo_id"/>
                 </tree>
@@ -153,6 +155,7 @@
                             <field name="committername"/>
                             <field name="reason_ok"/>
                             <field name="reason_pr_ok"/>
+                            <field name="create_status_ok"/>
                         </tree>
                         <form string="Build Lines">
                             <field name="branch_id"/>
@@ -166,7 +169,8 @@
                             <field name="committername"/>
                             <field name="prebuild_line_id"/>
                             <field name="reason_ok"/>
-			    <field name="reason_pr_ok"/>
+                            <field name="reason_pr_ok"/>
+                            <field name="create_status_ok"/>
                         </form>
                     </field>
                 </xpath>

@@ -924,6 +924,7 @@ class runbot_build(osv.osv):
         """Notify github of failed/successful builds"""
         runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
+            continue  # Temp to force use from inherit method of prebuild
             if build.repo_id.host_driver != 'github':
                 raise Exception('Repository does not have a driver to use github')
             if build.state != 'duplicate' and build.duplicate_id:
@@ -988,6 +989,8 @@ class runbot_build(osv.osv):
         build._log('run', 'Start running build %s' % build.dest)
         log_all = build.path('logs', 'job_20_test_all.txt')
         if not os.path.isfile(log_all):
+            if not os.path.isdir(os.path.dirname(log_all)):
+                os.makedirs(os.path.dirname(log_all))
             open(log_all, "w").write("created manually :( because is unexists.")
         log_time = time.localtime(os.path.getmtime(log_all))
         v = {

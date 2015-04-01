@@ -392,9 +392,12 @@ class runbot_build(osv.osv):
     def github_status_prebuild(self, cr, uid, ids, context=None):
         runbot_domain = self.pool['runbot.repo'].domain(cr, uid)
         for build in self.browse(cr, uid, ids, context=context):
-            if not build.change_prebuild_ok:
-               for build_line in build.line_ids:
-                    if build_line.reason_pr_ok:
+            if build.change_prebuild_ok:
+                continue
+            for build_line in build.line_ids:
+                if build_line.reason_pr_ok \
+                   and build_line.create_status_ok:
+                    if build_line.branch_id.repo_id.host_driver == 'github' and build_line.branch_id.repo_id.token:
                         desc = "runbot build %s - from prebuild %s" % (build.dest, build.prebuild_id.name)
                         if build.state == 'testing':
                             state = 'pending'
@@ -415,6 +418,8 @@ class runbot_build(osv.osv):
                         }
                         _logger.debug("github updating status %s to %s", build.name, state)
                         build_line.branch_id.repo_id.github('/repos/:owner/:repo/statuses/%s' % build_line.sha, status)
+                    else:
+                        _logger.debug("github NO updating status. No token or not github repo [%s]" % (build_line.branch_id.repo_id.name) )
         return True
 
 
