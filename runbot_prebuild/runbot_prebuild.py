@@ -164,6 +164,28 @@ class runbot_prebuild(osv.osv):
             'domain': [('id', 'in', build_ids)],
         }
 
+    def is_prebuild_change_to_create_new_builds(self, cr, uid, ids, values, context=None):
+        """
+        if a update data of prebuild detect change to re-create a new build then return True
+        """
+        prebuild_critical_fields = ['name']
+        module_branch_critical_fields = ['branch_id']
+
+        prebuild_fields = values.keys()
+        module_branch_fields = []
+        if 'module_branch_ids' in values:
+            for item_line in values['module_branch_ids']:
+                if len(item_line) == 3:
+                    if isinstance(item_line[2], dict):
+                        module_branch_fields.extend(item_line[2].keys())
+        for prebuild_critical_field in prebuild_critical_fields:
+            if prebuild_critical_field in prebuild_fields:
+                return True
+        for module_branch_critical_field in module_branch_critical_fields:
+            if module_branch_critical_field in module_branch_fields:
+                return True
+        return False
+
     def write(self, cr, uid, ids, values, context=None):
         """
         if update data prebuild then detect it in builds
@@ -177,7 +199,7 @@ class runbot_prebuild(osv.osv):
             build_ids = build_pool.search(cr, uid, [
                     ('prebuild_id', 'in', ids),
                 ], context=context)
-            if build_ids:
+            if build_ids and self.is_prebuild_change_to_create_new_builds(cr, uid, ids, values, context=context):
                 build_to_kill_ids = build_pool.search(cr, uid, [
                     ('id', 'in', build_ids),
                     ('state', '<>', 'done'),
