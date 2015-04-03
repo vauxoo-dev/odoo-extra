@@ -531,8 +531,16 @@ class RunbotController(RunbotController):
     Documentation TODO
     '''
 
-    @http.route(['/runbot',
-                 '/runbot/repo/<model("runbot.repo"):repo>',
+    @http.route(['/runbot'], type='http', auth="public", website=True)
+    def root_windows(self, repo=None, search='', limit='100', refresh='', **post):
+        registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
+        team_obj = registry['runbot.team']
+        team_ids = team_obj.search(cr, request.uid, [], order='id')
+        teams = team_obj.browse(cr, uid, team_ids)
+        context={'teams': teams}
+        return request.render("runbot_prebuild.runbot_home", context)
+
+    @http.route(['/runbot/repo/<model("runbot.repo"):repo>',
                  '/runbot/team/<model("runbot.team"):team>'],
                 type='http', auth="public", website=True)
     def repo(self, repo=None, team=None, search='', limit='30', refresh='',

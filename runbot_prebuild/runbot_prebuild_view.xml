@@ -215,6 +215,34 @@
             </field>
         </record>
 
+    <template id="runbot_teams" name="Teams">
+      <img src="http://wallpaperswide.com/download/big_hero_6_movie_baymax-wallpaper-1440x900.jpg"  class="center-block" >
+      <div class="text-center" style="position: absolute; width:100%; top:50%; background: transparent;">
+          <div class="btn-group">
+              <button type="button" class="btn btn-lg btn-default"><span>Pick a Team</span></button>
+              <button href="#" class="btn btn-default btn-lg dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" role="menu">
+                <t t-foreach='teams' t-as='team'>
+                    <li><a t-attf-href="/runbot/team/{{slug(team)}}"><t t-esc="team.name"/></a></li>
+                </t>
+              </ul>
+          </div>
+      </div>
+      </img>
+    </template>
+    <template id="runbot_home" name="Vauxoo Runbot">
+        <t t-call='website.layout'>
+            <div class="container">
+                <div class="row">
+                    <div class="row col-md-12">
+                        <t t-call="runbot_prebuild.runbot_teams"></t>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
         <xpath expr="//t[@t-set='head']" position="inside">
             <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
@@ -234,6 +262,11 @@
         <xpath expr="//t[@t-if='repo']/ul" position="replace">
             <!-- Just to delete the original caret.
                  -->
+        </xpath>
+        <xpath expr="//div[@t-if='not repo']" position="replace">
+            <div t-if="not repo" class="mb32">
+                <h1>My Dashboard</h1>
+            </div>
         </xpath>
         <xpath expr="//t[@t-as='bu']//td//t[4]" position="before">
             <t t-if="bu['prebuild_id'].name">
