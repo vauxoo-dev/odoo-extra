@@ -216,11 +216,11 @@
         </record>
 
     <template id="runbot_teams" name="Teams">
-      <img src="http://wallpaperswide.com/download/big_hero_6_movie_baymax-wallpaper-1440x900.jpg"  class="center-block" >
-      <div class="text-center" style="position: absolute; width:100%; top:50%; background: transparent;">
+      <img src="/runbot_prebuild/static/src/img/bkg.jpg" class="img-responsive" >
+      <div class="text-center" style="position: absolute; width:100%; top:25%; background: transparent;">
           <div class="btn-group">
-              <button type="button" class="btn btn-lg btn-default"><span>Pick a Team</span></button>
-              <button href="#" class="btn btn-default btn-lg dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+              <button type="button" class="btn btn-lg btn-primary"><span>Pick a Team</span></button>
+              <button href="#" class="btn btn-primary btn-lg dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                 <span class="caret"></span>
               </button>
               <ul class="dropdown-menu" role="menu">
