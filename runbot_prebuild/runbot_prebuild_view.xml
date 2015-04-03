@@ -216,7 +216,7 @@
         </record>
 
     <template id="runbot_teams" name="Teams">
-      <img src="/runbot_prebuild/static/src/img/bkg.jpg" class="img-responsive" >
+      <img src="/runbot_prebuild/static/src/img/bkg.jpg" class="img-responsive center-block" >
       <div class="text-center" style="position: absolute; width:100%; top:25%; background: transparent;">
           <div class="btn-group">
               <button type="button" class="btn btn-lg btn-primary"><span>Pick a Team</span></button>
