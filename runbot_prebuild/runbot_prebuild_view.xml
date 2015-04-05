@@ -29,7 +29,7 @@
                     <field name="check_new_commit"/>
                     <field name="create_status_ok"/>
                     <field name="sha"/>
-                    <field name="repo_id"/>
+                    <field invisible="1" name="repo_id"/>
                 </tree>
             </field>
         </record>
@@ -38,23 +38,46 @@
         <record id="view_prebuild_form" model="ir.ui.view">
             <field name="model">runbot.prebuild</field>
             <field name="arch" type="xml">
-                <form string="Pre-Build" version="7.0">
+                <form string="Pre-Build">
                     <header>
                         <button name="create_main_build" type="object" string="Create main build"/>
-                        <button name="get_builds_prebuild" string="Builds" type="object"/>
                     </header>
                     <sheet>
-                        <group>
-                            <field name="name"/>
-                            <field name="module_branch_ids"/>
-                            <field name="sticky"/>
-                            <field name="team_id"/>
-                            <field name="modules"/>
-                            <field name="lang"/>
-                            <field name="pylint_conf_path"/>
-                            <!--<field name="modules_to_exclude"/>-->
-                            <field name="script_prebuild"/>
-                            <field name="script_posbuild"/>
+                        <div class="oe_title oe_left">
+                                <div class="oe_edit_only">
+                                    <label for="sticky"/>
+                                    <field name="sticky" string="Do you want it auto-test per commit? (sticky)"/>
+                                </div>
+                            <h1>
+                               <field name="name" default_focus="1" placeholder="i.e.: 8.0-yourprebuild"/>
+                            </h1>
+                        </div>
+                        <div class="oe_right oe_button_box" name="buttons">
+                            <button class="oe_stat_button" icon="fa-list" name="get_builds_prebuild" type="object">
+                                <div><strong>Builds</strong></div>
+                            </button>
+                        </div>
+                        <group colspan="6">
+                            <group cols="3" string="Main Configuration">
+                                <field name="team_id"/>
+                            </group>
+                            <group cols="3" string="Extra Configuration">
+                                <field name="pylint_conf_path"/>
+                                <field name="lang"/>
+                                <!--<field name="modules_to_exclude"/>-->
+                            </group>
+                        </group>
+                        <separator string="Module to Install"/>
+                        <field name="modules" nolabel="1"/>
+                        <group colspan="6" string="Branches">
+                            <div>
+                                <p>
+                                    Select the necessary branches one by one<br/>
+                                    <strong>Hint:</strong> if you are looking for Vauxoo/lodigroup branch 8.0
+                                    look for 8.0%lodigroup and you will find it.
+                                </p>
+                                <field name="module_branch_ids" nolabel="1"/>
+                             </div>
                         </group>
                     </sheet>
                 </form>
@@ -85,7 +108,9 @@
                     <field name="modules"/>
                     <field name="lang"/>
                     <field name="pylint_conf_path"/>
+                    <!--
                     <field name="modules_to_exclude"/>
+                        -->
                     <field name="script_prebuild"/>
                     <field name="script_posbuild"/>
                 </search>
