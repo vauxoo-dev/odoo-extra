@@ -14,13 +14,35 @@
         <field name="users" eval="[(4, ref('base.user_root'))]"/>
         <field name="category_id" eval="ref('runbot_prebuild.category_runbot')"/>
     </record>
-
+    <!-- Admin runbot stuff.
+         -->
     <record id="group_runbot_admin" model="res.groups">
         <field name="name">Runbot Admin</field>
         <field name="comment">This user will be able to manage everything behind runbot</field>
         <field name="category_id" eval="ref('runbot_prebuild.category_runbot')"/>
     </record>
-
+        <!-- Admin runbot rules.
+             -->
+    <record id="admin_runbot_prebuild_rule" model="ir.rule">
+        <field name="name">runbot_prebuild: Admin user can do whatever it wants</field>
+        <field name="model_id" ref="model_runbot_prebuild"/>
+        <field name="domain_force">[(1,'=',1)]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_admin'))]"/>
+    </record>
+    <record id="admin_runbot_build_rule" model="ir.rule">
+        <field name="name">runbot_build: Admin user can do whatever it wants</field>
+        <field name="model_id" ref="model_runbot_build"/>
+        <field name="domain_force">[(1,'=',1)]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_admin'))]"/>
+    </record>
+    <record id="admin_runbot_repo_rule" model="ir.rule">
+        <field name="name">runbot_repo: Admin user can do whatever it wants</field>
+        <field name="model_id" ref="model_runbot_repo"/>
+        <field name="domain_force">[(1,'=',1)]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_admin'))]"/>
+    </record>
+    <!-- End of admin runbot stuff
+         -->
     <record id="private_runbot_team" model="ir.rule">
         <field name="name">Private runbot team</field>
         <field name="model_id" ref="model_runbot_team"/>
