@@ -2,11 +2,30 @@
 <openerp>
 <data noupdate="0">
     
+    <record id="category_runbot" model="ir.module.category">
+        <field name="name">Runbot</field>
+        <field name="sequence">1000</field>
+    </record>
+
     <record id="group_runbot_private" model="res.groups">
         <field name="name">Runbot Private</field>
         <field name="comment">This user will see all the teams</field>
         <field name="implied_ids" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
         <field name="users" eval="[(4, ref('base.user_root'))]"/>
+        <field name="category_id" eval="ref('runbot_prebuild.category_runbot')"/>
+    </record>
+
+    <record id="group_runbot_admin" model="res.groups">
+        <field name="name">Runbot Admin</field>
+        <field name="comment">This user will be able to manage everything behind runbot</field>
+        <field name="category_id" eval="ref('runbot_prebuild.category_runbot')"/>
+    </record>
+
+    <record id="private_runbot_team" model="ir.rule">
+        <field name="name">Private runbot team</field>
+        <field name="model_id" ref="model_runbot_team"/>
+        <field name="domain_force">[('privacy_visibility','=','private')]</field>
+        <field name="groups" eval="[(4, ref('runbot_prebuild.group_runbot_private'))]"/>
     </record>
 
     <record id="private_runbot_team" model="ir.rule">
@@ -64,6 +83,5 @@
         <field name="domain_force">[('team_id.privacy_visibility','=','public')]</field>
         <field name="groups" eval="[(4, ref('base.group_portal')),(4, ref('base.group_public'))]"/>
     </record>
-    
 </data>
 </openerp>
