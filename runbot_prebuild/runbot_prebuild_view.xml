@@ -302,6 +302,9 @@
         <xpath expr="//t[@t-as='bu']//td//t[4]" position="before">
             <t t-if="bu['prebuild_id'].name">
                 <div class="list-group builds">
+                    <div class="list-group-item">
+                        <t t-call="runbot.build_button"></t>
+                    </div>
                     <t t-foreach="bu['build'].line_ids" t-as="build_line">
                         <!--
                         <a t-att-href="build_line.branch_id.branch_url" target="_blank"><t t-esc="build_line.branch_id.complete_name"/></a>
@@ -324,7 +327,7 @@
             <!-- Just to delete content
                  -->
         </xpath>
-        <xpath expr='//td[@t-attf-class="{{klass}}"]//br' position="replace">
+        <xpath expr='//br[1]' position="replace">
             <!-- Just to delete content
                  -->
         </xpath>
@@ -343,21 +346,21 @@
             <t t-set="manual_test" 
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and not br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
-            <div class="list-group">
+            <div class="list-group builds">
+                <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
                 <a class="list-group-item" t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
-                <h5 class="list-group-item-heading">
-                    <i t-if="sticky_test" class="fa fa-star"> <span t-esc="br['builds'][0]['prebuild_id'].name[:18]+'...'"/></i>
-                    <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="br['builds'][0]['prebuild_id'].name[:18]+'...'"/></i>
-                </h5>
+                    <h5>
+                    <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
+                    <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
+                    </h5>
                 </a>
-                <p class="list-group-item-text"></p>
-                <!-- All should be the same use the first just for information purpose
-                <t t-foreach="br['builds'][0].line_ids" t-as="build_line">
-                    <a class="list-group-item" target="_NEW" t-att-href="build_line.branch_id.branch_url">
-                        <span><t t-esc="build_line.branch_id.complete_name"/></span>
-                    </a>
-                </t> -->
+                <t t-foreach="br['builds'][0]['prebuild_id'].module_branch_ids" t-as="branch_id">
+                    <a class="list-group-item" t-att-href="branch_id.branch_id.repo_id.url" t-esc="branch_id.branch_id.repo_id.url"/>
+                </t>
             </div>
+        </xpath>
+        <xpath expr='//t[@t-call="runbot.build_button"]' position="replace">
+            <t t-set="klass">btn-group-sm</t>
         </xpath>
     </template>
 
@@ -423,14 +426,15 @@
         <xpath expr="//li[13]" position="after">
             <li><a t-attf-href="/runbot/build/{{bu['id']}}/kill" t-attf-onclick="$.post('/runbot/build/{{bu['id']}}/label/1')">Kill Build</a></li>
         </xpath>
-        <xpath expr="//a[1]" position="before">
-            <!-- Github button do not make sense here (already in lines)
-                 -->
-            <a t-att-href="'#'+bu['dest']" t-att-id="bu['dest']" class="btn btn-primary"><t t-esc="bu['dest']"/></a>
-        </xpath>
         <xpath expr="//a[3]" position="replace">
             <!-- Github button do not make sense here (already in lines)
                  -->
+        </xpath>
+        <xpath expr="//a[2]" position="before">
+            <a t-att-href="'#'+bu['dest']" t-att-id="bu['dest']" class="btn btn-default"><t t-esc="bu['dest']"/></a>
+        </xpath>
+        <xpath expr="//div[1]" position="attributes">
+            <attribute name="t-attf-class"></attribute>
         </xpath>
     </template>
 
