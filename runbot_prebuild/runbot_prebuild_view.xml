@@ -268,6 +268,11 @@
             </div>
         </t>
     </template>
+    <template id="assets_frontend" inherit_id="website.assets_frontend">
+        <xpath expr="." position="inside">
+            <script src="/runbot_prebuild/static/src/ext.js" type="type/javascript"/>
+        </xpath>
+    </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
         <xpath expr="//t[@t-set='head']" position="inside">
             <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
@@ -310,7 +315,7 @@
                         <a t-att-href="build_line.branch_id.branch_url" target="_blank"><t t-esc="build_line.branch_id.complete_name"/></a>
                         -->
                         <!--<span t-esc="prebuild_line.author"/>-->
-                        <a t-att-class="(build_line.reason_ok and 'active ' or '') + 'list-group-item '" t-att-href="build_line.commit_url" target="_blank"><t t-esc="build_line.short_sha"/></a>
+                        <a t-att-class="(build_line.reason_ok and 'active ' or '') + 'list-group-item '" t-att-title="build_line.branch_id.complete_name"  data-toggle="tooltip" data-placement="top" t-att-href="build_line.commit_url" target="_blank"><t t-esc="build_line.short_sha"/></a>
                     </t>
                 </div>
             </t>
