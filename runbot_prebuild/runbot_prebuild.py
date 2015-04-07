@@ -664,6 +664,7 @@ class RunbotController(RunbotController):
         '''
         res = super(RunbotController, self).build_info(build)
         res.update({'prebuild_id': build.prebuild_id,
+                    'fmpo': build.from_main_prebuild_ok,
                     'build': build})
         return res
 
