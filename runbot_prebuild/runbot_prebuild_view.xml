@@ -346,17 +346,25 @@
             <t t-set="manual_test" 
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and not br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
-            <div class="list-group builds">
-                <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
-                <a class="list-group-item" t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
-                    <h5>
+            <t t-set="pr_test" 
+                t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and not br['builds'][0]['fmpo']">
+            </t>
+            <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
+            <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
+                <h4 style="margin-bottom: 15px;"> <!--style wired intentionally to adjust list items.-->
                     <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
                     <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
-                    </h5>
-                </a>
+                    <t t-if="pr_test">
+                        <i class="fa fa-info-circle"> <span t-esc="bname"/></i> <sup><i class="fa fa-code-fork">
+                                <span t-esc="'/'.join(br['builds'][0]['build'].branch_id.name.split('/')[1:])"/></i></sup>
+                    </t>
+                </h4>
+            </a>
+            <div class="list-group builds">
                 <t t-foreach="br['builds'][0]['prebuild_id'].module_branch_ids" t-as="branch_id">
                     <a class="list-group-item" t-att-href="branch_id.branch_id.repo_id.url" t-esc="branch_id.branch_id.repo_id.url"/>
                 </t>
+                
             </div>
         </xpath>
         <xpath expr='//t[@t-call="runbot.build_button"]' position="replace">
