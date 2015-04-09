@@ -362,7 +362,18 @@
             </a>
             <div class="list-group builds">
                 <t t-foreach="br['builds'][0]['prebuild_id'].module_branch_ids" t-as="branch_id">
-                    <a class="list-group-item" t-att-href="branch_id.branch_id.repo_id.url" t-esc="branch_id.branch_id.repo_id.url"/>
+                    <a class="list-group-item" t-att-href="branch_id.branch_id.branch_url" target="_NEW">
+                        <t t-set="burl" t-value="branch_id.branch_id.repo_id.url"/>
+                        <t t-if="burl.startswith('https:///github')">
+                            <i class="fa fa-github"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                        <t t-if="burl.startswith('https:///bitbucket')">
+                            <i class="fa fa-bitbucket"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                        <t t-if="burl.startswith('file:///')">
+                            <i class="fa fa-linux" title="launchpad.net"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                    </a>
                 </t>
                 
             </div>
