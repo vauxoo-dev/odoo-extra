@@ -535,7 +535,7 @@ class RunbotController(RunbotController):
     def root_windows(self, repo=None, search='', limit='100', refresh='', **post):
         registry, cr, uid = request.registry, request.cr, SUPERUSER_ID
         team_obj = registry['runbot.team']
-        team_ids = team_obj.search(cr, request.uid, [], order='id')
+        team_ids = team_obj.search(cr, request.uid, [], order='name asc')
         teams = team_obj.browse(cr, uid, team_ids)
         context={'teams': teams}
         return request.render("runbot_prebuild.runbot_home", context)
@@ -562,7 +562,7 @@ class RunbotController(RunbotController):
         branch_obj = registry['runbot.branch']
         build_obj = registry['runbot.build']
         team_obj = registry['runbot.team']
-        team_ids = team_obj.search(cr, request.uid, [], order='id')
+        team_ids = team_obj.search(cr, request.uid, [], order='name asc')
         teams = team_obj.browse(cr, uid, team_ids)
         res.qcontext.update({'teams': teams})
         if team:
