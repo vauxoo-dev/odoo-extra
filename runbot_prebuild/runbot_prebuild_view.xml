@@ -299,11 +299,6 @@
             <!-- Just to delete the original caret.
                  -->
         </xpath>
-        <xpath expr="//div[@t-if='not repo']" position="replace">
-            <div t-if="not repo" class="mb32">
-                <h1>My Dashboard</h1>
-            </div>
-        </xpath>
         <xpath expr="//t[@t-as='bu']//td//t[4]" position="before">
             <t t-if="bu['prebuild_id'].name">
                 <div class="list-group builds">
