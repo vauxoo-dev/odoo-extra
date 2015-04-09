@@ -351,7 +351,7 @@
             </t>
             <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
             <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
-                <h4 style="margin-bottom: 15px;"> <!--style wired intentionally to adjust list items.-->
+                <h4 style="margin-bottom: 14px; margin-top: 14px;"> <!--style wired intentionally to adjust list items.-->
                     <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
                     <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
                     <t t-if="pr_test">
