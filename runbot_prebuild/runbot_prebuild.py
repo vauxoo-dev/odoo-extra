@@ -522,8 +522,8 @@ class runbot_build_line(osv.osv):
             type='char', help='Sha short commit. Last 7 chars'),
         'create_status_ok': fields.boolean('Create Status',
                     help='If is True, this will create a status '
-                                     'of build in github. More info here: '
-                                                      'https://developer.github.com/v3/repos/statuses/#create-a-status'),
+                         'of build in github. More info here: '
+                         'https://developer.github.com/v3/repos/statuses/#create-a-status'),
     }
 
 class RunbotController(RunbotController):
@@ -664,6 +664,7 @@ class RunbotController(RunbotController):
         '''
         res = super(RunbotController, self).build_info(build)
         res.update({'prebuild_id': build.prebuild_id,
+                    'fmpo': build.from_main_prebuild_ok,
                     'build': build})
         return res
 

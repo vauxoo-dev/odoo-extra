@@ -239,7 +239,7 @@
                 </xpath>
             </field>
         </record>
-
+    <!-- Templates -->
     <template id="runbot_teams" name="Teams">
       <img src="/runbot_prebuild/static/src/img/bkg.jpg" class="img-responsive center-block" >
       <div class="text-center" style="position: absolute; width:100%; top:25%; background: transparent;">
@@ -268,6 +268,11 @@
             </div>
         </t>
     </template>
+    <template id="assets_frontend" inherit_id="website.assets_frontend">
+        <xpath expr="." position="inside">
+            <script src="/runbot_prebuild/static/src/ext.js" type="type/javascript"/>
+        </xpath>
+    </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
         <xpath expr="//t[@t-set='head']" position="inside">
             <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
@@ -284,34 +289,97 @@
             </li>
           </ul>
         </xpath>
+        <xpath expr="//table/tr/th" position="replace">
+            <th><h5>Information</h5></th> 
+        </xpath>
+        <xpath expr="//table/tr/td" position="replace">
+            <td colspan="4"><h5>Builds</h5></td> 
+        </xpath>
         <xpath expr="//t[@t-if='repo']/ul" position="replace">
             <!-- Just to delete the original caret.
                  -->
         </xpath>
-        <xpath expr="//div[@t-if='not repo']" position="replace">
-            <div t-if="not repo" class="mb32">
-                <h1>My Dashboard</h1>
-            </div>
-        </xpath>
         <xpath expr="//t[@t-as='bu']//td//t[4]" position="before">
             <t t-if="bu['prebuild_id'].name">
-                <t t-foreach="bu['build'].line_ids" t-as="build_line">
-                    <div t-att-class="(build_line.reason_ok and 'reasonok ' or '') + 'prebuilds'">
-                        <a t-att-href="build_line.branch_id.branch_url" target="_blank"><t t-esc="build_line.branch_id.complete_name"/></a>
-                        <!--<span t-esc="prebuild_line.author"/>-->
-                        <a t-att-href="build_line.commit_url" target="_blank"><t t-esc="build_line.short_sha"/></a>
-                        <br/>
+                <div class="list-group builds">
+                    <div class="list-group-item">
+                        <t t-call="runbot.build_button"></t>
                     </div>
-                </t>
+                    <t t-foreach="bu['build'].line_ids" t-as="build_line">
+                        <!--
+                        <a t-att-href="build_line.branch_id.branch_url" target="_blank"><t t-esc="build_line.branch_id.complete_name"/></a>
+                        -->
+                        <!--<span t-esc="prebuild_line.author"/>-->
+                        <a t-att-class="(build_line.reason_ok and 'active ' or '') + 'list-group-item '" t-att-title="build_line.branch_id.complete_name"  data-toggle="tooltip" data-placement="top" t-att-href="build_line.commit_url" target="_blank"><t t-esc="build_line.short_sha"/></a>
+                    </t>
+                </div>
             </t>
         </xpath>
+        <xpath expr='//tr[@t-foreach="branches"]//small' position="replace">
+            <!-- Just to delete content
+                 -->
+        </xpath>
+        <xpath expr='//tr[@t-foreach="branches"]//div[@class="btn-group btn-group-xs"]' position="replace">
+            <!-- Just to delete content
+                 -->
+        </xpath>
+        <xpath expr='//td[@t-attf-class="{{klass}}"]//t[@t-if]' position="replace">
+            <!-- Just to delete content
+                 -->
+        </xpath>
+        <xpath expr='//br[1]' position="replace">
+            <!-- Just to delete content
+                 -->
+        </xpath>
+        <xpath expr='//td[@t-attf-class="{{klass}}"]//small' position="replace">
+            <!-- Buttons replaced to set the correct header. 
+                 -->
+        </xpath>
+        <xpath expr='//td[@t-attf-class="{{klass}}"]//t[@t-id]' position="replace">
+            <!-- Just to delete content
+                 -->
+        </xpath>
         <xpath expr="//td//b[@t-esc]" position="replace">
-            <t t-if="br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0]">
-                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].name_id)}}"><b t-att-id="br['builds'][0]['build'][0].name_id" t-esc="br['builds'][0]['build'][0].author"/></a>
+            <t t-set="sticky_test" 
+                t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
-            <t t-if="not (br['builds'] and br['builds'][0] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'][0])">
-                <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].name_id)}}"><b  t-att-id="br['builds'][0]['build'][0].name_id" t-esc="br['branch'].branch_name"/></a>
+            <t t-set="manual_test" 
+                t-value="br['builds'] and br['builds'][0]['prebuild_id'] and not br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
+            <t t-set="pr_test" 
+                t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and not br['builds'][0]['fmpo']">
+            </t>
+            <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
+            <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
+                <h4 style="margin-bottom: 14px; margin-top: 14px;"> <!--style wired intentionally to adjust list items.-->
+                    <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
+                    <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
+                    <t t-if="pr_test">
+                        <i class="fa fa-info-circle"> <span t-esc="bname"/></i> <sup><i class="fa fa-code-fork">
+                                <span t-esc="'/'.join(br['builds'][0]['build'].branch_id.name.split('/')[1:])"/></i></sup>
+                    </t>
+                </h4>
+            </a>
+            <div class="list-group builds">
+                <t t-foreach="br['builds'][0]['prebuild_id'].module_branch_ids" t-as="branch_id">
+                    <a class="list-group-item" t-att-href="branch_id.branch_id.branch_url" target="_NEW">
+                        <t t-set="burl" t-value="branch_id.branch_id.repo_id.url"/>
+                        <t t-if="burl.startswith('https:///github')">
+                            <i class="fa fa-github"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                        <t t-if="burl.startswith('https:///bitbucket')">
+                            <i class="fa fa-bitbucket"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                        <t t-if="burl.startswith('file:///')">
+                            <i class="fa fa-linux" title="launchpad.net"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
+                    </a>
+                </t>
+                
+            </div>
+        </xpath>
+        <xpath expr='//t[@t-call="runbot.build_button"]' position="replace">
+            <t t-set="klass">btn-group-sm</t>
         </xpath>
     </template>
 
@@ -373,11 +441,19 @@
             </xpath>
         </field>
     </record>
-
-    <!--Inherit runbot qweb view-->
-    <template id="build_button_kill_build" inherit_id="runbot.build_button">
+    <template id="build_button" inherit_id="runbot.build_button">
         <xpath expr="//li[13]" position="after">
             <li><a t-attf-href="/runbot/build/{{bu['id']}}/kill" t-attf-onclick="$.post('/runbot/build/{{bu['id']}}/label/1')">Kill Build</a></li>
+        </xpath>
+        <xpath expr="//a[3]" position="replace">
+            <!-- Github button do not make sense here (already in lines)
+                 -->
+        </xpath>
+        <xpath expr="//a[2]" position="before">
+            <a t-att-href="'#'+bu['dest']" t-att-id="bu['dest']" class="btn btn-default"><t t-esc="bu['dest']"/></a>
+        </xpath>
+        <xpath expr="//div[1]" position="attributes">
+            <attribute name="t-attf-class"></attribute>
         </xpath>
     </template>
 

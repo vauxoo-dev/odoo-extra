@@ -26,3 +26,15 @@ td.killed {
     padding: 1px !important
 
 }
+.builds.list-group:first-child {
+    border-top: 1px solid #ddd;
+}
+.builds .list-group-item {
+    padding: 1px;
+    background-color: transparent;
+    border: 0px;
+    border-bottom: 1px solid #ddd;
+}
+.builds .list-group-item.active {
+    background-color: #428bca;
+}
