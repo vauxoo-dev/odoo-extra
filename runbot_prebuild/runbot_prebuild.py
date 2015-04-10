@@ -90,7 +90,9 @@ class runbot_team(osv.Model):
     _name = 'runbot.team'
 
     _columns = {
-        'name': fields.char('Name', help='Name of the team'),
+        'name': fields.char('Name', help='Name of the team (For visual purpose try to not use more that 16 characters)'),
+        'color': fields.char('Hexadecimal color for background in the frontend'),
+        'bg_image_id': fields.many2one('ir.attachment', "Background Image", help='image to be used in background on frontend'),
         'description': fields.text('Desciption',
                                    help='A little description of the team'),
         'privacy_visibility': fields.selection(
@@ -538,7 +540,7 @@ class RunbotController(RunbotController):
         team_ids = team_obj.search(cr, request.uid, [], order='name asc')
         teams = team_obj.browse(cr, uid, team_ids)
         context={'teams': teams}
-        return request.render("runbot_prebuild.runbot_home", context)
+        return request.website.render("runbot_prebuild.runbot_home", context)
 
     @http.route(['/runbot/repo/<model("runbot.repo"):repo>',
                  '/runbot/team/<model("runbot.team"):team>'],
