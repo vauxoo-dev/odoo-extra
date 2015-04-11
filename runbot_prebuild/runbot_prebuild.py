@@ -32,6 +32,7 @@ import logging
 import time
 import werkzeug
 from collections import OrderedDict
+from random import choice
 
 from openerp.addons.runbot.runbot import RunbotController
 from openerp.addons.runbot.runbot import flatten
@@ -89,12 +90,29 @@ class runbot_team(osv.Model):
 
     _name = 'runbot.team'
 
+    def _get_image_url(self, cr, uid, ids, name, args, context=None):
+        result = {}
+        att_obj = self.pool.get('ir.attachment')
+        att_ids = att_obj.search(cr, uid, [('name', 'ilike', '128-%')], context=context)
+        for team in self.browse(cr, uid, ids, context=context):
+            # Random choice the image from vauxoo lib, if not default one.
+            url = team.bg_image_id and team.bg_image_id.url or (ids and (att_obj.browse(cr, uid, [choice(att_ids)])[0].url or '/website/image/ir.attachment/{0}_b892a1c/datas'.format(att_ids[0])) or '/runbot_prebuild/static/img/portfolio.png')
+            result[team.id] = url
+        return result
+
     _columns = {
         'name': fields.char('Name', help='Name of the team (For visual purpose try to not use more that 16 characters)'),
-        'color': fields.char('Hexadecimal color for background in the frontend'),
+        'color': fields.char('Background Color', help='Hexadecimal color for background in the frontend'),
         'bg_image_id': fields.many2one('ir.attachment', "Background Image", help='image to be used in background on frontend'),
+        'bg_image_url': fields.function(_get_image_url, string='Computed image Url', type='char',
+                                        help='Url of the bg image', store=True),
         'description': fields.text('Desciption',
-                                   help='A little description of the team'),
+                                   help='A little description of the team it will be used as help in the dashboard on frontend'),
+        'groups_id': fields.many2many('res.groups', 'team_groups_rel', 'team_id', 'group_id', 'Groups',
+                                   help='Which groups will have access to this team'),
+        'prebuild_ids': fields.many2many('runbot.prebuild', 'runbot_prebuild_rel', 'team_id', 'prebuild_id', 'Prebuilds',
+                                         help='Which prebuilds are the main for this team, in order to show constantly the status in the frontend.',
+                                         domain=[('sticky', '=', True)]),
         'privacy_visibility': fields.selection(
             [('public', 'Public'),
              ('private', 'Private')], 'Privacy Visibility'),
@@ -191,7 +209,7 @@ class runbot_prebuild(osv.osv):
     def write(self, cr, uid, ids, values, context=None):
         """
         if update data prebuild then detect it in builds
-        This will create a new build with new change 
+        This will create a new build with new change
         into new_pr and main_build function.
         """
         if isinstance(ids, (long, int)):
