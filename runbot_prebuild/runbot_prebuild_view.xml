@@ -145,6 +145,9 @@
                         <group>
                             <field name="name"/>
                             <field name="privacy_visibility"/>
+                            <field name="color" placeholder="i.e: rgb(0,3,3) or #fff"/>
+                            <field name="bg_image_id"/>
+                            <field name="bg_image_url"/>
                             <field name="description"/>
                         </group>
                     </sheet>
@@ -245,7 +248,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <t t-foreach='teams' t-as='team'>
-                        <div class="col-md-3 col-sm-4 col-xs-6 bg-gamma" style="height: 250px;">
+                        <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
                             <p class="bg-white">
                                 <i class="fa fa-desktop fa-1x text-primary"/>
                                 <strong>- <t t-esc="team.name"/></strong>
