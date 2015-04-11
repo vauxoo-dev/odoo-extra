@@ -241,35 +241,29 @@
         </record>
     <!-- Templates -->
     <template id="runbot_teams" name="Teams">
-        <div id="wrap" class="oe_structure oe_empty">
-          <section class="s_images_captions_fw">
+        <section class="s_images_captions_fw">
             <div class="container-fluid">
-              <div class="row">
-                <t t-foreach='teams' t-as='team'>
-                    <div class="col-md-3 col-sm-4 col-xs-6 bg-gamma" style="height: 250px;">
-                      <p class="bg-white">
-                        <i class="fa fa-desktop fa-1x text-primary"/>
-                        <strong>- <t t-esc="team.name"/></strong>
-                      </p>
-                    <div class="footer">
-                        <a href="#" class="btn btn-primary"><i class="fa fa-check-square"></i></a>
-                        <a class="btn btn-secondary" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i></a>
-                    </div>
-                    </div>
-                </t>
-              </div>
+                <div class="row">
+                    <t t-foreach='teams' t-as='team'>
+                        <div class="col-md-3 col-sm-4 col-xs-6 bg-gamma" style="height: 250px;">
+                            <p class="bg-white">
+                                <i class="fa fa-desktop fa-1x text-primary"/>
+                                <strong>- <t t-esc="team.name"/></strong>
+                            </p>
+                            <div class="footer">
+                                <a href="#" class="btn btn-primary"><i class="fa fa-check-square"></i></a>
+                                <a class="btn btn-secondary" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i></a>
+                            </div>
+                        </div>
+                    </t>
+                </div>
             </div>
-          </section>
-        </div>
+        </section>
     </template>
     <template id="runbot_home" name="Vauxoo Runbot">
         <t t-call='website.layout'>
-            <div class="container">
-                <div class="row">
-                    <div class="row col-md-12">
-                        <t t-call="runbot_prebuild.runbot_teams"></t>
-                    </div>
-                </div>
+            <div id="wrap" class="oe_structure oe_empty">
+                <t t-call="runbot_prebuild.runbot_teams"></t>
             </div>
         </t>
     </template>
@@ -293,10 +287,10 @@
           </ul>
         </xpath>
         <xpath expr="//table/tr/th" position="replace">
-            <th><h5>Information</h5></th> 
+            <th><h5>Information</h5></th>
         </xpath>
         <xpath expr="//table/tr/td" position="replace">
-            <td colspan="4"><h5>Builds</h5></td> 
+            <td colspan="4"><h5>Builds</h5></td>
         </xpath>
         <xpath expr="//t[@t-if='repo']/ul" position="replace">
             <!-- Just to delete the original caret.
@@ -335,7 +329,7 @@
                  -->
         </xpath>
         <xpath expr='//td[@t-attf-class="{{klass}}"]//small' position="replace">
-            <!-- Buttons replaced to set the correct header. 
+            <!-- Buttons replaced to set the correct header.
                  -->
         </xpath>
         <xpath expr='//td[@t-attf-class="{{klass}}"]//t[@t-id]' position="replace">
@@ -343,13 +337,13 @@
                  -->
         </xpath>
         <xpath expr="//td//b[@t-esc]" position="replace">
-            <t t-set="sticky_test" 
+            <t t-set="sticky_test"
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
-            <t t-set="manual_test" 
+            <t t-set="manual_test"
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and not br['builds'][0]['prebuild_id'].sticky and br['builds'][0]['fmpo']">
             </t>
-            <t t-set="pr_test" 
+            <t t-set="pr_test"
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and not br['builds'][0]['fmpo']">
             </t>
             <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
@@ -378,7 +372,7 @@
                         </t>
                     </a>
                 </t>
-                
+
             </div>
         </xpath>
         <xpath expr='//t[@t-call="runbot.build_button"]' position="replace">
@@ -424,7 +418,7 @@
             </xpath>
         </field>
     </record>
-    
+
     <record id="view_branch_form_inh_full_name" model="ir.ui.view">
         <field name="model">runbot.branch</field>
         <field name="inherit_id" ref="runbot.view_branch_form"/>
