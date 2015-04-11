@@ -276,12 +276,10 @@
     <template id="assets_frontend" inherit_id="website.assets_frontend">
         <xpath expr="." position="inside">
             <script src="/runbot_prebuild/static/src/ext.js" type="type/javascript"/>
+            <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
         </xpath>
     </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
-        <xpath expr="//t[@t-set='head']" position="inside">
-            <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
-        </xpath>
         <xpath expr="//t[@t-if='repo']" position="before">
           <ul class="nav navbar-nav">
             <li class="dropdown">
