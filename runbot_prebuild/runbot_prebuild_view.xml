@@ -142,14 +142,27 @@
             <field name="arch" type="xml">
                 <form string="team" version="7.0">
                     <sheet>
-                        <group>
-                            <field name="name"/>
-                            <field name="privacy_visibility"/>
-                            <field name="color" placeholder="i.e: rgb(0,3,3) or #fff"/>
-                            <field name="bg_image_id"/>
-                            <field name="bg_image_url"/>
-                            <field name="description"/>
-                        </group>
+                        <h1><field name="name" placholder="i.e.: CustomerName"/></h1>
+                        <div class="oe_right"><label for="privacy_visibility"/><field name="privacy_visibility"/></div>
+                        <notebook>
+                            <page string="General Information">
+                                <group>
+                                    <field string="Public Description" name="description"/>
+                                </group>
+                            </page>
+                            <page string="Dashboard Info">
+                            </page>
+                            <page string="Look and Feel">
+                                <group>
+                                    <field name="color" placeholder="i.e: rgb(0,3,3) or #fff"/>
+                                    <field name="bg_image_id"/>
+                                    <field name="bg_image_url"/>
+                                </group>
+                            </page>
+                            <page string="Security">
+                                <field name="groups_id" nolabel="1"/>
+                            </page>
+                        </notebook>
                     </sheet>
                 </form>
             </field>
@@ -248,7 +261,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <t t-foreach='teams' t-as='team'>
-                        <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
+                        <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-title="team.description" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
                             <p class="bg-white">
                                 <i class="fa fa-desktop fa-1x text-primary"/>
                                 <strong>- <t t-esc="team.name"/></strong>

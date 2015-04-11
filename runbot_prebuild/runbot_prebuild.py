@@ -107,7 +107,9 @@ class runbot_team(osv.Model):
         'bg_image_url': fields.function(_get_image_url, string='Computed image Url', type='char',
                                         help='Url of the bg image', store=True),
         'description': fields.text('Desciption',
-                                   help='A little description of the team'),
+                                   help='A little description of the team it will be used as help in the dashboard on frontend'),
+        'groups_id': fields.many2many('res.groups', 'team_groups_rel', 'team_id', 'group_id', 'Groups',
+                                   help='Which groups will have access to this team'),
         'privacy_visibility': fields.selection(
             [('public', 'Public'),
              ('private', 'Private')], 'Privacy Visibility'),
