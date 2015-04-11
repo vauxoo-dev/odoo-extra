@@ -110,6 +110,9 @@ class runbot_team(osv.Model):
                                    help='A little description of the team it will be used as help in the dashboard on frontend'),
         'groups_id': fields.many2many('res.groups', 'team_groups_rel', 'team_id', 'group_id', 'Groups',
                                    help='Which groups will have access to this team'),
+        'prebuild_ids': fields.many2many('runbot.prebuild', 'runbot_prebuild_rel', 'team_id', 'prebuild_id', 'Prebuilds',
+                                         help='Which prebuilds are the main for this team, in order to show constantly the status in the frontend.',
+                                         domain=[('sticky', '=', True)]),
         'privacy_visibility': fields.selection(
             [('public', 'Public'),
              ('private', 'Private')], 'Privacy Visibility'),

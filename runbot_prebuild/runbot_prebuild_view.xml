@@ -151,6 +151,7 @@
                                 </group>
                             </page>
                             <page string="Dashboard Info">
+                                <field name="prebuild_ids" nolabel="1"/>
                             </page>
                             <page string="Look and Feel">
                                 <group>
@@ -262,13 +263,12 @@
                 <div class="row">
                     <t t-foreach='teams' t-as='team'>
                         <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-title="team.description" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
-                            <p class="bg-white">
-                                <i class="fa fa-desktop fa-1x text-primary"/>
-                                <strong>- <t t-esc="team.name"/></strong>
+                            <p class="bg-transparent">
+                                <a class="btn btn-sm btn-secondary" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i>
+                                <strong>- <t t-esc="team.name"/></strong></a>
                             </p>
-                            <div class="footer">
+                            <div class="footer" style="bottom: -155px; position: relative;">
                                 <a href="#" class="btn btn-primary"><i class="fa fa-check-square"></i></a>
-                                <a class="btn btn-secondary" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i></a>
                             </div>
                         </div>
                     </t>
