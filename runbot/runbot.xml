@@ -13,9 +13,9 @@
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only"/>
                         <h1><field name="name" class="oe_inline"/></h1>
-                        <button name="update" type="object" string="Update"/>
-                        <button name="cron" type="object" string="Cron"/>
-                        <button name="killall" type="object" string="Killall"/>
+                        <button name="update" type="object" string="Update" groups="runbot.group_runbot_admin"/>
+                        <button name="cron" type="object" string="Cron" groups="runbot.group_runbot_admin"/>
+                        <button name="killall" type="object" string="Killall" groups="runbot.group_runbot_admin"/>
                     </div>
                     <group string="Params">
                         <field name="testing"/>
@@ -31,12 +31,11 @@
                         <field name="jobs"/>
                         <field name="nginx"/>
                         <field name="duplicate_id"/>
-                        <field name="dependency_ids">
-                            <tree><field name="name"/></tree>
-                        </field>
+                        <field name="dependency_ids" widget="many2many_tags"/>
                         <field name="modules"/>
                         <field name="token"/>
                         <field name="active"/>
+                        <field name="group_ids" widget="many2many_tags"/>
                     </group>
                 </sheet>
             </form>
@@ -86,6 +85,7 @@
                         <field name="repo_name"/>
                         <field name="repo_owner"/>
                         <field name="complete_name"/>
+                        <field name="modules"/>
                     </group>
                 </sheet>
             </form>
@@ -152,7 +152,9 @@
                         <field name="name"/>
                         <field name="date"/>
                         <field name="author"/>
+                        <field name="author_email"/>
                         <field name="committer"/>
+                        <field name="committer_email"/>
                         <field name="subject"/>
                         <field name="port"/>
                         <field name="dest"/>
@@ -166,6 +168,7 @@
                         <field name="job_age"/>
                         <field name="duplicate_id"/>
                         <field name="branch_dependency_id"/>
+                        <field name="modules"/>
                     </group>
                 </sheet>
             </form>
@@ -342,8 +345,8 @@
                                     <li class="dropdown">
                                       <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b style="font-size: 18px;"><t t-esc="repo.base"/></b><b class="caret"></b></a>
                                       <ul class="dropdown-menu">
-                                        <t t-foreach='repos' t-as='repo'>
-                                            <li><a t-attf-href="/runbot/repo/{{slug(repo)}}"><t t-esc="repo.base"/></a></li>
+                                        <t t-foreach='repos' t-as='re'>
+                                            <li><a t-attf-href="/runbot/repo/{{slug(re)}}"><t t-esc="re.base"/></a></li>
                                         </t>
                                       </ul>
                                     </li>
@@ -380,14 +383,16 @@
                                     </ul>
                                   </div>
                                 </form>
-                                <span t-foreach="host_stats" t-as="hs" class="navbar-brand navbar-right">
-                                    <t t-esc="hs['host']"/>: <t t-esc="hs['testing']"/> testing, <t t-esc="hs['running']"/> running
-                                </span>
-                                <span class="navbar-brand navbar-right">
-                                  Pending: <t t-esc="pending_total"/> 
-                                </span>
                               </t>
                             </div>
+                            <p class="text-center">
+                                <t  t-foreach="host_stats" t-as="hs">
+                                <span class="label label-default">
+                                    <t t-esc="hs['host']"/>: <t t-esc="hs['testing']"/> testing, <t t-esc="hs['running']"/> running
+                                </span>&amp;nbsp;
+                                </t>
+                                <span class="label label-info">Pending: <t t-esc="pending_total"/></span>
+                            </p>
                           </div>
                         </nav>
                         <div t-if="not repo" class="mb32">
@@ -407,7 +412,7 @@
                         </tr>
                         <tr t-foreach="branches" t-as="br">
                             <td>
-                                <i t-if="br['branch'].sticky and br['branch_dependency'] is not None" class="fa fa-star"/>
+                                <i t-if="br['branch'].sticky" class="fa fa-star" style="color: #f0ad4e" />
                                 <b t-esc="br['branch'].branch_name"/>
                                 <span t-if="br['branch_dependency'] is not None" t-esc="br['branch_dependency'] and br['branch_dependency'].branch_url"/>
 <!--                                <span t-if="br['branch_dependency']" t-esc="br['branch_dependency'].repo_id.owner"/>
@@ -418,6 +423,7 @@
                                 <small><t t-esc="br['builds'][0]['job_age']"/></small><br/>
                                 <div class="btn-group btn-group-xs">
                                     <a t-attf-href="{{br['branch'].branch_url}}" class="btn btn-default btn-xs">Branch or pull <i class="fa fa-github"/></a>
+                                    <a t-attf-href="/runbot/#{repo.id}/#{br['branch'].branch_name}" class="btn btn-default btn-xs"><i class="fa fa-fast-forward" title="Quick Connect"/></a>
                                 </div>
                             </td>
                             <t t-foreach="br['builds']" t-as="bu">
@@ -441,7 +447,7 @@
                                         </t>
                                         <br/>
                                     </t>
-                                    <small><t t-esc="bu['dest']"/></small><br/>
+                                    <small><t t-esc="bu['dest']"/> on <t t-esc="bu['host']"/></small><br/>
                                     <t t-call="runbot.build_name"/>
                                 </td>
                             </t>
@@ -509,6 +515,11 @@
                                   <button type="button" class="btn btn-default">Expand</button>
                                 </div>
                               </form>
+
+                              <form class="navbar-form navbar-left form-inline" t-attf-action="/runbot/build/#{build['id']}/force" method='POST' t-if="request.params.get('ask_rebuild')">
+                                <a href='#' class="btn btn-danger runbot-rebuild" t-attf-data-runbot-build="#{build['id']}" > <i class='fa fa-refresh'/> Force Rebuild</a>
+                              </form>
+
                               <ul class="nav navbar-nav navbar-right">
                                 <li class="dropdown">
                                   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Other builds <b class="caret"></b></a>
@@ -599,10 +610,9 @@ events { worker_connections  1024; }
 http {
     include /etc/nginx/mime.types;
     #include /opt/local/etc/nginx/mime.types;#TODO: Set this file if exists on mac is other one
-    server_names_hash_max_size 1024;
-    server_names_hash_bucket_size 512;
-    types_hash_max_size 1024;
-    types_hash_bucket_size 64;
+    server_names_hash_max_size 512;
+    server_names_hash_bucket_size 256;
+    client_max_body_size 10M;
     index index.html;
     log_format full '$remote_addr - $remote_user [$time_local] '
                     '"$request" $status $body_bytes_sent '
@@ -669,17 +679,21 @@ http {
           <stop offset=".9" stop-color="#fff" stop-opacity=".1"/>
           <stop offset="1"  stop-color="#fff" stop-opacity=".1"/>
         </linearGradient>
-        <rect t-attf-width="{{ left.width + right.width }}" height="20" t-att-fill="left.color"/>
-        <rect t-att-x="left.width" t-att-width="right.width" height="20" t-att-fill="right.color"/>
+        <rect rx="3" t-attf-width="{{ left.width + right.width }}" height="20" t-att-fill="left.color"/>
+        <rect rx="3" t-att-x="left.width" t-att-width="right.width" height="20" t-att-fill="right.color"/>
         <rect t-att-x="left.width" width="4" height="20" t-att-fill="right.color"/>
-        <rect t-attf-width="{{ left.width + right.width }}" height="20" fill="url(#smooth)"/>
+        <rect rx="3" t-attf-width="{{ left.width + right.width }}" height="20" fill="url(#smooth)"/>
         <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
-          <text t-attf-x="{{left.width/2+1}}" y="13"><t t-esc="left.text"/></text>
-          <text t-attf-x="{{left.width+right.width/2-1}}" y="13"><t t-esc="right.text"/></text>
+          <text t-attf-x="{{left.width/2+1}}" y="15" fill="#010101" fill-opacity=".3"><t t-esc="left.text"/></text> 
+          <text t-attf-x="{{left.width/2+1}}" y="14"><t t-esc="left.text"/></text>
+          <text t-attf-x="{{left.width+right.width/2-1}}" y="15" fill="#010101" fill-opacity=".3"><t t-esc="right.text"/></text>
+          <text t-attf-x="{{left.width+right.width/2-1}}" y="14"><t t-esc="right.text"/></text>
         </g>
       </svg>
     </template>
+</data>
 
+<data noupdate="1">
     <!-- Cron schedule-->
     <record model="ir.cron" id="repo_cron">
         <field name='name'>Runbot Cron Schedule</field>
@@ -703,4 +717,5 @@ http {
         <field name="args">()</field>
     </record>
 </data>
+
 </openerp>
