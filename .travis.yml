@@ -1,0 +1,23 @@
+language: python
+
+build_image: vauxoo/odoo-80-image-shippable-auto
+commit_container: cowardvassal/vauxoo-dev
+
+python:
+  - "2.7"
+
+env:
+  - VERSION="8.0" ODOO_REPO="odoo/odoo" EXCLUDE="base_report_designer,crm_profiling,document_fs,plugin,plugin_outlook,plugin_thunderbird,pos_cache"  LINT_CHECK="0"
+
+virtualenv:
+  system_site_packages: true
+
+install:
+  - git clone --single-branch --depth=1 https://github.com/vauxoo/maintainer-quality-tools.git -b master ${HOME}/maintainer-quality-tools
+  - export PATH=${HOME}/maintainer-quality-tools/travis:${PATH}
+  - travis_install_nightly
+  - sudo apt-get install python-matplotlib # temporary dependency https://github.com/odoo/odoo-extra/pull/3
+  - git clone --single-branch --depth=1 https://github.com/vauxoo/runbot-addons.git -b 8.0-vauxoo ${HOME}/runbot-addons
+ 
+script:
+  - travis_run_tests
