@@ -407,8 +407,7 @@ class runbot_repo(osv.osv):
         if len(domain) == 2:
             domain.insert(0, '|')
         #domain = [('repo_id', 'in', ids)]#new change: TODO: Now not receive build_ids. This is used in our custom modules?
-        #domain_host = domain + [('host', '=', host)]#new change
-        domain_host = []
+        domain_host = domain + [('host', '=', host)]
 
         # schedule jobs (transitions testing -> running, kill jobs, ...)
         build_ids = Build.search(cr, uid, domain_host + [('state', 'in', ['testing', 'running'])])
