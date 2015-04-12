@@ -409,6 +409,9 @@
                         <t t-if="burl.startswith('file:///')">
                             <i class="fa fa-linux" title="Code hosted in launchpad.net"> <span t-esc="branch_id.branch_id.complete_name"/></i>
                         </t>
+                        <t t-if="burl.startswith('/')">
+                            <i class="fa fa-file" title="Code hosted locally"> <span t-esc="branch_id.branch_id.complete_name"/></i>
+                        </t>
                     </a>
                 </t>
 
