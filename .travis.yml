@@ -16,6 +16,7 @@ install:
   - git clone --single-branch --depth=1 https://github.com/vauxoo/maintainer-quality-tools.git -b master ${HOME}/maintainer-quality-tools
   - export PATH=${HOME}/maintainer-quality-tools/travis:${PATH}
   - travis_install_nightly
+  - sudo apt-get install python-matplotlib # temporary dependency https://github.com/odoo/odoo-extra/pull/3
   - git clone --single-branch --depth=1 https://github.com/vauxoo/runbot-addons.git -b 8.0-vauxoo ${HOME}/runbot-addons
  
 script:
