@@ -264,11 +264,11 @@
                     <t t-foreach='teams' t-as='team'>
                         <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-title="team.description" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
                             <p class="bg-transparent">
-                                <a class="btn btn-sm btn-secondary" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i>
+                                <a class="btn btn-xs btn-info" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i>
                                 <strong>- <t t-esc="team.name"/></strong></a>
                             </p>
                             <div class="footer" style="bottom: -155px; position: relative;">
-                                <a href="#" class="btn btn-primary"><i class="fa fa-check-square"></i></a>
+                                <a href="#" class="btn btn-xs btn-primary"><i class="fa fa-check-square"></i></a>
                             </div>
                         </div>
                     </t>
@@ -312,45 +312,37 @@
             <!-- Just to delete the original caret.
                  -->
         </xpath>
-        <xpath expr="//t[@t-as='bu']//td//t[4]" position="before">
-            <t t-if="bu['prebuild_id'].name">
-                <div class="list-group builds">
-                    <div class="list-group-item">
-                        <t t-call="runbot.build_button"></t>
+        <xpath expr="//table/tr[@t-as='br']//br" position="replace">
+        </xpath>
+        <xpath expr="//table/tr[@t-as='br']//small" position="replace">
+        </xpath>
+        <xpath expr="//table/tr[@t-as='br']//div[@class='btn-group btn-group-xs']" position="replace">
+        </xpath>
+        <xpath expr="//t[@t-as='bu']" position="replace">
+            <t t-foreach="br['builds']" t-as="bu">
+                <t t-if="bu['state']=='pending'"><t t-set="klass">default</t></t>
+                <t t-if="bu['state']=='testing'"><t t-set="klass">info</t></t>
+                <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'ko'"><t t-set="klass">danger</t></t>
+                <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'warn'"><t t-set="klass">warning</t></t>
+                <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'ok'"><t t-set="klass">success</t></t>
+                <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'skipped'"><t t-set="klass">default</t></t>
+                <t t-if="bu['state'] in ['running','done'] and bu['result'] == 'killed'"><t t-set="klass">killed</t></t>
+                <td t-attf-class="{{klass}}">
+                    <div style="padding: 5px;">
+                        <t t-call="runbot.build_button"><t t-set="klass">btn-group-sm</t></t>
+                        <t t-if="bu['prebuild_id'].name">
+                            <t t-call="runbot.build_button"></t>
+                            <div class="list-group builds">
+                                <t t-foreach="bu['build'].line_ids" t-as="build_line">
+                                    <a t-att-class="(build_line.reason_ok and 'active ' or '') + 'list-group-item '" t-att-title="build_line.branch_id.complete_name"  data-toggle="tooltip" data-placement="top" t-att-href="build_line.commit_url" target="_blank">
+                                        <i class="fa fa-external-link"><span t-esc="build_line.short_sha"/></i></a>
+                                </t>
+                            </div>
+                            <t t-call="runbot.build_name"/>
+                        </t>
                     </div>
-                    <t t-foreach="bu['build'].line_ids" t-as="build_line">
-                        <!--
-                        <a t-att-href="build_line.branch_id.branch_url" target="_blank"><t t-esc="build_line.branch_id.complete_name"/></a>
-                        -->
-                        <!--<span t-esc="prebuild_line.author"/>-->
-                        <a t-att-class="(build_line.reason_ok and 'active ' or '') + 'list-group-item '" t-att-title="build_line.branch_id.complete_name"  data-toggle="tooltip" data-placement="top" t-att-href="build_line.commit_url" target="_blank"><t t-esc="build_line.short_sha"/></a>
-                    </t>
-                </div>
+                </td>
             </t>
-        </xpath>
-        <xpath expr='//tr[@t-foreach="branches"]//small' position="replace">
-            <!-- Just to delete content
-                 -->
-        </xpath>
-        <xpath expr='//tr[@t-foreach="branches"]//div[@class="btn-group btn-group-xs"]' position="replace">
-            <!-- Just to delete content
-                 -->
-        </xpath>
-        <xpath expr='//td[@t-attf-class="{{klass}}"]//t[@t-if]' position="replace">
-            <!-- Just to delete content
-                 -->
-        </xpath>
-        <xpath expr='//br[1]' position="replace">
-            <!-- Just to delete content
-                 -->
-        </xpath>
-        <xpath expr='//td[@t-attf-class="{{klass}}"]//small' position="replace">
-            <!-- Buttons replaced to set the correct header.
-                 -->
-        </xpath>
-        <xpath expr='//td[@t-attf-class="{{klass}}"]//t[@t-id]' position="replace">
-            <!-- Just to delete content
-                 -->
         </xpath>
         <xpath expr="//td//b[@t-esc]" position="replace">
             <t t-set="sticky_test"
@@ -363,15 +355,13 @@
                 t-value="br['builds'] and br['builds'][0]['prebuild_id'] and br['builds'][0]['prebuild_id'].sticky and not br['builds'][0]['fmpo']">
             </t>
             <t t-set="bname" t-value="len(br['builds'][0]['prebuild_id'].name) >= 20 and br['builds'][0]['prebuild_id'].name[:19]+'...' or br['builds'][0]['prebuild_id'].name"/>
-            <a t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
-                <h4 style="margin-bottom: 14px; margin-top: 14px;"> <!--style wired intentionally to adjust list items.-->
-                    <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
-                    <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
-                    <t t-if="pr_test">
-                        <i class="fa fa-info-circle"> <span t-esc="bname"/></i> <sup><i class="fa fa-code-fork">
-                                <span t-esc="'/'.join(br['builds'][0]['build'].branch_id.name.split('/')[1:])"/></i></sup>
-                    </t>
-                </h4>
+            <a class="btn btn-xs btn-link" t-attf-href="{{'#' + str(br['builds'][0]['build'][0].id)}}" t-att-id="br['builds'][0]['build'][0].id" t-att-title="br['builds'][0]['build'][0].name">
+                <i t-if="sticky_test" class="fa fa-star"> <span t-esc="bname"/></i>
+                <i t-if="manual_test" class="fa fa-hand-o-right"> <span t-esc="bname"/></i>
+                <t t-if="pr_test">
+                    <i class="fa fa-info-circle"> <span t-esc="bname"/></i> <sup><i class="fa fa-code-fork">
+                            <span t-esc="'/'.join(br['builds'][0]['build'].branch_id.name.split('/')[1:])"/></i></sup>
+                </t>
             </a>
             <div class="list-group builds">
                 <t t-foreach="br['builds'][0]['prebuild_id'].module_branch_ids" t-as="branch_id">
@@ -392,7 +382,7 @@
             </div>
         </xpath>
         <xpath expr='//t[@t-call="runbot.build_button"]' position="replace">
-            <t t-set="klass">btn-group-sm</t>
+            <t t-set="klass">btn-group-xs</t>
         </xpath>
     </template>
 
@@ -454,19 +444,43 @@
             </xpath>
         </field>
     </record>
-    <template id="build_button" inherit_id="runbot.build_button">
-        <xpath expr="//li[13]" position="after">
-            <li><a t-attf-href="/runbot/build/{{bu['id']}}/kill" t-attf-onclick="$.post('/runbot/build/{{bu['id']}}/label/1')">Kill Build</a></li>
-        </xpath>
-        <xpath expr="//a[3]" position="replace">
-            <!-- Github button do not make sense here (already in lines)
-                 -->
-        </xpath>
-        <xpath expr="//a[2]" position="before">
-            <a t-att-href="'#'+bu['dest']" t-att-id="bu['dest']" class="btn btn-default"><t t-esc="bu['dest']"/></a>
-        </xpath>
-        <xpath expr="//div[1]" position="attributes">
-            <attribute name="t-attf-class"></attribute>
+
+    <template id="build_button" inherit_id="runbot.build_button" name="Pre Build Button">
+        <xpath expr="//div[@t-attf-class='pull-right']" position="replace">
+            <div t-attf-class="btn-group {{klass}}">
+                <a t-att-href="'#'+bu['dest']" t-att-id="bu['dest']" class="btn btn-default btn-xs"><t t-esc="bu['dest']"/></a>
+                <a t-if="bu['state']=='running'" target="_blank" t-attf-href="http://{{bu['domain']}}/?db={{bu['dest']}}-all" class="btn btn-primary btn-xs"><i class="fa fa-sign-in"/></a>
+                <a t-attf-href="/runbot/build/{{bu['id']}}" class="btn btn-default btn-xs"><i class="fa fa-file-text-o"/></a>
+                <a t-attf-href="https://#{repo.base}/commit/#{bu['name']}" class="btn btn-default btn-xs"><i class="fa fa-github"/></a>
+                <button class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"/><span class="caret"></span></button>
+                <ul class="dropdown-menu" role="menu">
+                    <li t-if="bu['result']=='skipped'">
+                        <a href="#" class="runbot-rebuild" t-att-data-runbot-build="bu['id']">Force Build <i class="fa fa-level-up"></i></a>
+                    </li>
+                    <t t-if="bu['state']=='running'">
+                        <li><a t-attf-href="http://{{bu['host']}}/?db={{bu['real_dest']}}-all">Connect all <i class="fa fa-sign-in"></i></a></li>
+                        <li><a t-attf-href="http://{{bu['host']}}/?db={{bu['real_dest']}}-base">Connect base <i class="fa fa-sign-in"></i></a></li>
+                        <li><a t-attf-href="http://{{bu['host']}}/">Connect <i class="fa fa-sign-in"></i></a></li>
+                    </t>
+                    <li t-if="bu['state'] in ['done','running'] and bu_index==0">
+                        <a href="#" class="runbot-rebuild" t-att-data-runbot-build="bu['id']">Rebuild <i class="fa fa-refresh"/></a>
+                    </li>
+                    <li t-if="bu['state']!='testing' and bu['state']!='pending'" class="divider"></li>
+                    <li><a t-attf-href="/runbot/build/{{bu['id']}}">Logs <i class="fa fa-file-text-o"/></a></li>
+                    <li><a t-attf-href="http://{{bu['host']}}/runbot/static/build/#{bu['real_dest']}/logs/job_10_test_base.txt">Full base logs <i class="fa fa-file-text-o"/></a></li>
+                    <li><a t-attf-href="http://{{bu['host']}}/runbot/static/build/#{bu['real_dest']}/logs/job_20_test_all.txt">Full all logs <i class="fa fa-file-text-o"/></a></li>
+                    <li><a t-attf-href="/runbot/static/build/#{bu['real_dest']}/logs/job_25_pylint.txt">Pylint logs <i class="fa fa-file-text-o"/></a></li>
+                    <li t-if="bu['state']!='pending'" class="divider"></li>
+                    <li><a t-attf-href="{{br['branch'].branch_url}}">Branch or pull <i class="fa fa-github"/></a></li>
+                    <li><a t-attf-href="https://{{repo.base}}/commit/{{bu['name']}}">Commit <i class="fa fa-github"/></a></li>
+                    <li><a t-attf-href="https://{{repo.base}}/compare/{{br['branch'].branch_name}}">Compare <i class="fa fa-github"/></a></li>
+                    <!-- TODO branch.pull from -->
+                    <li class="divider"></li>
+                    <li class="disabled"><a href="#">Runtime: <t t-esc="bu['job_time']"/>s</a></li>
+                    <li class="disabled"><a href="#">Port: <t t-esc="bu['port']"/></a></li>
+                    <li class="disabled"><a href="#">Age: <t t-esc="bu['job_age']"/></a></li>
+                </ul>
+            </div>
         </xpath>
     </template>
 
