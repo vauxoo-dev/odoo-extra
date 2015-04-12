@@ -289,28 +289,61 @@
             <link href="/runbot_prebuild/static/src/css/runbot_css.css" rel="stylesheet"/>
         </xpath>
     </template>
+    <template id="runbot_prebuild.runbot_navbar" name="Runbot Navbar">
+      <t t-if="repo">
+        <div class="btn-group btn-group-xs" role="group">
+            <div class="btn-group">
+            <a href="#" class="btn btn-info btn-xs dropdown-toggle" data-toggle="dropdown"><b><i class="fa fa-users"></i> <t t-esc="team and team.name or 'Pick a Team'"/></b><b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <t t-foreach='teams' t-as='team'>
+                  <li><a t-attf-href="/runbot/team/{{slug(team)}}"><span t-esc="team.name"/></a></li>
+              </t>
+            </ul>
+            </div>
+            <div class="btn-group">
+            <a href="#" class="btn btn-info btn-xs dropdown-toggle" data-toggle="dropdown"><i class="fa fa-filter"></i><span> Filter</span><b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li t-if="filters['pending']=='0'"><a t-att-href="qu(pending=1)">Pending</a></li>
+              <li t-if="filters['pending']=='1'"><a t-att-href="qu(pending='0')"><i class="fa fa-check"/> Pending</a></li>
+              <li t-if="filters['testing']=='0'"><a t-att-href="qu(testing=1)">Testing</a></li>
+              <li t-if="filters['testing']=='1'"><a t-att-href="qu(testing='0')"><i class="fa fa-check"/> Testing</a></li>
+              <li t-if="filters['running']=='0'"><a t-att-href="qu(running=1)">Running</a></li>
+              <li t-if="filters['running']=='1'"><a t-att-href="qu(running='0')"><i class="fa fa-check"/> Running</a></li>
+              <li t-if="filters['done']=='0'"><a t-att-href="qu(done=1)">Done</a></li>
+              <li t-if="filters['done']=='1'"><a t-att-href="qu(done='0')"><i class="fa fa-check"/> Done</a></li>
+              <li class="divider"></li>
+              <li t-att-class="'active' if limit=='100' else ''"><a t-att-href="qu(limit=100)">Show last 100</a></li>
+              <li t-att-class="'active' if limit=='1000' else ''"><a t-att-href="qu(limit=1000)">Show last 1000</a></li>
+              <li t-att-class="'active' if limit=='10000' else ''"><a t-att-href="qu(limit=10000)">Show last 10000</a></li>
+            </ul>
+            </div>
+            <div class="btn btn-warning btn-xs">
+                <t t-call='runbot_prebuild.runbot_status'/>
+            </div>
+        </div>
+        <!-- TODO: Now it is not working and only brings noise to the view.
+            <form class="form-inline" role="search" t-att-action="qu(search='')" method="get">
+              <div class="input-group">
+                <input type="search" name="search" class="form-control" placeholder="Search" t-att-value="search"/>
+                <button type="submit" class="input-group-addon btn btn-xs btn-default">Search</button>
+              </div>
+            </form>
+        -->
+      </t>
+    </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
-        <xpath expr="//t[@t-if='repo']" position="before">
-          <ul class="nav navbar-nav">
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b style="font-size: 18px;"><t t-esc="team and team.name or 'Pick a Team'"/></b><b class="caret"></b></a>
-              <ul class="dropdown-menu">
-                <t t-foreach='teams' t-as='team'>
-                    <li><a t-attf-href="/runbot/team/{{slug(team)}}"><t t-esc="team.name"/></a></li>
-                </t>
-              </ul>
-            </li>
-          </ul>
+        <xpath expr="//div[@class='container-fluid']" position="before">
+            <div class="container-fluid">
+                <t t-call="runbot_prebuild.runbot_navbar"/>
+            </div>
+        </xpath>
+        <xpath expr="//div[@class='col-md-12']//nav" position="replace">
         </xpath>
         <xpath expr="//table/tr/th" position="replace">
             <th><h5>Information</h5></th>
         </xpath>
         <xpath expr="//table/tr/td" position="replace">
             <td colspan="4"><h5>Builds</h5></td>
-        </xpath>
-        <xpath expr="//t[@t-if='repo']/ul" position="replace">
-            <!-- Just to delete the original caret.
-                 -->
         </xpath>
         <xpath expr="//table/tr[@t-as='br']//br" position="replace">
         </xpath>
@@ -385,7 +418,14 @@
             <t t-set="klass">btn-group-xs</t>
         </xpath>
     </template>
-
+    <template id="runbot_prebuild.runbot_status" name="Runbot Status">
+        <t  t-foreach="host_stats" t-as="hs">
+        <span class="label label-default">
+            <t t-esc="hs['host']"/>: <t t-esc="hs['testing']"/> testing, <t t-esc="hs['running']"/> running
+        </span>&amp;nbsp;
+        </t>
+        <span class="label label-info">Pending: <t t-esc="pending_total"/></span>
+    </template>
     <template id="runbot_inherit_build" inherit_id="runbot.build" name="Runbot Build">
         <xpath expr="//a[1]" position="replace">
             <t t-if="repo and not team">
