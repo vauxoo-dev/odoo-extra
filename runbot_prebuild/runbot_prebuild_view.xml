@@ -317,9 +317,6 @@
               <li t-att-class="'active' if limit=='10000' else ''"><a t-att-href="qu(limit=10000)">Show last 10000</a></li>
             </ul>
             </div>
-            <div class="btn btn-warning btn-xs">
-                <t t-call='runbot_prebuild.runbot_status'/>
-            </div>
         </div>
         <!-- TODO: Now it is not working and only brings noise to the view.
             <form class="form-inline" role="search" t-att-action="qu(search='')" method="get">
@@ -333,17 +330,20 @@
     </template>
     <template id="runbot_prebuild" inherit_id="runbot.repo" name="Runbot PreBuild">
         <xpath expr="//div[@class='container-fluid']" position="before">
-            <div class="container-fluid">
-                <t t-call="runbot_prebuild.runbot_navbar"/>
-            </div>
         </xpath>
         <xpath expr="//div[@class='col-md-12']//nav" position="replace">
         </xpath>
         <xpath expr="//table/tr/th" position="replace">
-            <th><h5>Information</h5></th>
+            <th>
+                <span>Team: </span>
+                <t t-call="runbot_prebuild.runbot_navbar"/>
+            </th>
         </xpath>
         <xpath expr="//table/tr/td" position="replace">
-            <td colspan="4"><h5>Builds</h5></td>
+            <td colspan="4">
+                <span><b>Statuses</b> </span>
+                <t t-call='runbot_prebuild.runbot_status'/>
+            </td>
         </xpath>
         <xpath expr="//table/tr[@t-as='br']//br" position="replace">
         </xpath>
