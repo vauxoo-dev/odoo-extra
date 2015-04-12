@@ -358,7 +358,7 @@ class runbot_build(osv.osv):
                     # and it need original state.
                     context2 = context.copy()
                     context2.update({'terminate_ok': False})
-                    self.terminate(cr, uid, build_ids_to_kill, context=context2)
+                    self.kill(cr, uid, build_ids_to_kill, context=context2)
         res = super(runbot_build, self).write(cr, uid, ids, vals,\
                                                context=context)
         return res
