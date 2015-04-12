@@ -16,6 +16,7 @@ install:
   - git clone --single-branch --depth=1 https://github.com/vauxoo/maintainer-quality-tools.git -b master ${HOME}/maintainer-quality-tools
   - export PATH=${HOME}/maintainer-quality-tools/travis:${PATH}
   - travis_install_nightly
+  - git clone --single-branch --depth=1 https://github.com/vauxoo/runbot-addons.git -b master ${HOME}/runbot-addons
  
 script:
   - travis_run_tests
