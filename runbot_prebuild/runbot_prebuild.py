@@ -91,12 +91,25 @@ class runbot_team(osv.Model):
     _name = 'runbot.team'
 
     def _get_image_url(self, cr, uid, ids, name, args, context=None):
+        """
+        Images are by default setted randomly between all the images that start
+        with '128-' on the name. It is to encourage the usage of 128pxX128px
+        images as background to hace a good look and feel, (but they can be of
+        any size).
+
+        If image_id is setted on team, then such image is used.
+
+        If you combine bg_color with image try to use images with background
+        transparet in order to have the benefit of the bg color effect.
+        """
         result = {}
         att_obj = self.pool.get('ir.attachment')
         att_ids = att_obj.search(cr, uid, [('name', 'ilike', '128-%')], context=context)
         for team in self.browse(cr, uid, ids, context=context):
+            url = '/runbot_prebuild/static/img/128-bg_placeholder.png'
             # Random choice the image from vauxoo lib, if not default one.
-            url = team.bg_image_id and team.bg_image_id.url or (ids and (att_obj.browse(cr, uid, [choice(att_ids)])[0].url or '/website/image/ir.attachment/{0}_b892a1c/datas'.format(att_ids[0])) or '/runbot_prebuild/static/img/portfolio.png')
+            if att_ids:
+                url = team.bg_image_id and team.bg_image_id.url or (ids and (att_obj.browse(cr, uid, [choice(att_ids)])[0].url or '/website/image/ir.attachment/{0}_b892a1c/datas'.format(att_ids[0])) or url)
             result[team.id] = url
         return result
 
