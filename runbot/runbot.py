@@ -307,8 +307,6 @@ class runbot_repo(osv.osv):
                 session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
                 if payload:
                     response = session.post(url, data=simplejson.dumps(payload))
-                elif delete:
-                    response = session.delete(url)
                 else:
                     response = session.get(url)
                 return response.json()
