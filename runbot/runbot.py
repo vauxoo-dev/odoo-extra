@@ -1227,7 +1227,8 @@ class runbot_build(osv.osv):
         for build in self.browse(cr, uid, ids, context=context):
             build.logger('killing %s', build.pid)
             try:
-                os.killpg(build.pid, signal.SIGKILL)
+                if not (build.pid==os.getpid() or build.pid==os.getppid() or build.pid==0):
+                    os.killpg(build.pid, signal.SIGKILL)
             except OSError:
                 pass
             v = {'state': 'done', 'job': False}
