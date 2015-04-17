@@ -378,7 +378,7 @@ class runbot_repo(osv.osv):
                     'date': dateutil.parser.parse(date[:19]),
                     'modules': ','.join(filter(None, [branch.repo_id.modules, branch.modules])),
                 }
-                Build.create(cr, uid, build_info)
+                #Build.create(cr, uid, build_info) # Force to use prebuild module
 
         # skip old builds (if their sequence number is too low, they will not ever be built)
         skippable_domain = [('repo_id', '=', repo.id), ('state', '=', 'pending')]
