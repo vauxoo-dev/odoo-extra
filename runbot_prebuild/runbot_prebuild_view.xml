@@ -134,6 +134,7 @@
                     <field name="name"/>
                     <field name="privacy_visibility"/>
                     <field name="description"/>
+                    <field name="jobs_running"/>
                 </tree>
             </field>
         </record>
@@ -260,19 +261,23 @@
     <template id="runbot_teams" name="Teams">
         <section class="s_images_captions_fw">
             <div class="container-fluid">
-                <div class="row">
-                    <t t-foreach='teams' t-as='team'>
-                        <div class="col-md-3 col-lg-2 col-sm-6 col-xs-12" t-att-title="team.description" t-att-style="'height: 250px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)">
-                            <p class="bg-transparent">
-                                <a class="btn btn-xs btn-info" t-attf-href="/runbot/team/{{slug(team)}}"><i class="fa fa-search"></i>
-                                <strong>- <t t-esc="team.name"/></strong></a>
-                            </p>
-                            <div class="footer" style="bottom: -155px; position: relative;">
-                                <a href="#" class="btn btn-xs btn-primary"><i class="fa fa-check-square"></i></a>
-                            </div>
+                    <t t-foreach='teams' t-as='team' class="row">
+                    <div class="media">
+                        <a class="pull-left" href="#">
+                            <img class="media-object dp img-circle" t-att-src="team.bg_image_url" style="width: 100px;height:100px;"/>
+                        </a>
+                        <div class="media-body">
+                            <h4 class="media-heading"><t t-raw="team.name"/><small></small></h4>
+                            <h5>Prebuilds <t t-raw="len(team.prebuild_ids)"/></h5>
+                            <hr style="margin:8px auto"/>
+
+                            <a t-attf-href="/runbot/team/{{slug(team)}}"><span class="label label-info"><i class="fa fa-search"></i>Enter Team</span></a>
+                            <span class="label label-default">jQuery</span>
+                            <span class="label label-info">CakePHP</span>
+                            <span class="label label-default">Android</span>
                         </div>
+                    </div>
                     </t>
-                </div>
             </div>
         </section>
     </template>

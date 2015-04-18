@@ -113,6 +113,19 @@ class runbot_team(osv.Model):
             result[team.id] = url
         return result
 
+    def _get_jobs(self, cr, uid, ids, name, args, context=None):
+        """
+        This method will return the jobs on the prebuilds asociated
+        to the current team.
+        """
+        res = {}
+        build_obj = self.pool.get('runbot.build')
+        for team in self.browse(cr, uid, ids, context):
+            build_ids = build_obj.search(cr, uid, [
+                ('team_id', '=', team.id),
+                ('state', '=', 'running')])
+        res[ids[0]] = len(build_ids)
+
     _columns = {
         'name': fields.char('Name', help='Name of the team (For visual purpose try to not use more that 16 characters)'),
         'color': fields.char('Background Color', help='Hexadecimal color for background in the frontend'),
@@ -129,6 +142,9 @@ class runbot_team(osv.Model):
         'privacy_visibility': fields.selection(
             [('public', 'Public'),
              ('private', 'Private')], 'Privacy Visibility'),
+        'jobs_running': fields.function(_get_jobs, string='Jobs Running',
+                                        type='integer',
+                                        help='Jobs Running', store=False),
     }
 
 class runbot_prebuild(osv.osv):
@@ -570,6 +586,7 @@ class RunbotController(RunbotController):
         team_obj = registry['runbot.team']
         team_ids = team_obj.search(cr, request.uid, [], order='name asc')
         teams = team_obj.browse(cr, uid, team_ids)
+
         context={'teams': teams}
         return request.website.render("runbot_prebuild.runbot_home", context)
 
