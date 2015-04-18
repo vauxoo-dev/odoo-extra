@@ -33,6 +33,7 @@ import time
 import werkzeug
 from collections import OrderedDict
 from random import choice
+from openerp.tools.translate import _
 
 from openerp.addons.runbot.runbot import RunbotController
 from openerp.addons.runbot.runbot import flatten
@@ -153,6 +154,19 @@ class runbot_prebuild(osv.osv):
     '''
     _name = "runbot.prebuild"
 
+    def _check_single_main(self, cr, uid, ids, context=None):
+        self_brw = self.browse(cr, uid, ids, context)[0]
+        other_ids = self.search(cr, uid, [
+            ('id', 'not in', ids),
+            ('main_build', '=', True),
+            ('team_id', '=', self_brw.team_id.id)])
+        if other_ids:
+            raise osv.except_osv(
+                _('Invalid Action!'),
+                _('The Team {0} can only contain one prebuild marked as\
+                  "Is Main Build" plese verify'.format(self_brw.team_id.name)))
+        return True
+
     _columns = {
         'name': fields.char("Name", size=128, required=True),
         'team_id': fields.many2one('runbot.team', 'Team',
@@ -182,11 +196,19 @@ class runbot_prebuild(osv.osv):
             'Parent Prebuild', copy=True,
             help='If this is a prebuild from PR this field is for set '
             'original prebuild'),
+        'main_build': fields.boolean('Is Main Build',
+            help='Check this if you want to share the status of this build on\
+            the Website Team Panel.', copy=False),
     }
 
     _defaults = {
         'sticky': False,
     }
+
+    _constraints = [
+        (_check_single_main, "Error: Only one build can be main",
+            ['main_build'])
+    ]
     # TODO: Add constraint that add prebuild_lines of least one main repo type
     # TODO: Add related to repo.type store=True
 

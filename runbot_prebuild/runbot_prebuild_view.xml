@@ -60,6 +60,7 @@
                         <group colspan="6">
                             <group cols="3" string="Main Configuration">
                                 <field name="team_id"/>
+                                <field name="main_build"/>
                             </group>
                             <group cols="3" string="Extra Configuration">
                                 <field name="pylint_conf_path"/>
