@@ -262,7 +262,7 @@
         <section class="s_images_captions_fw">
             <div class="container-fluid">
                     <t t-foreach='teams' t-as='team' class="row">
-                    <div class="media">
+                    <div class="media col-md-3 col-lg-2 col-sm-6 col-xs-12">
                         <a class="pull-left" href="#">
                             <img class="media-object dp img-circle" t-att-src="team.bg_image_url" style="width: 100px;height:100px;"/>
                         </a>
@@ -272,9 +272,7 @@
                             <hr style="margin:8px auto"/>
 
                             <a t-attf-href="/runbot/team/{{slug(team)}}"><span class="label label-info"><i class="fa fa-search"></i>Enter Team</span></a>
-                            <span class="label label-default">jQuery</span>
-                            <span class="label label-info">CakePHP</span>
-                            <span class="label label-default">Android</span>
+                            <span class="label label-success"><t t-raw="team.jobs_running"/> Jobs Running</span>
                         </div>
                     </div>
                     </t>
