@@ -157,10 +157,10 @@ class runbot_prebuild(osv.osv):
     def _check_single_main(self, cr, uid, ids, context=None):
         self_brw = self.browse(cr, uid, ids, context)[0]
         other_ids = self.search(cr, uid, [
-            ('id', 'not in', ids),
+            ('id', '!=', self_brw.id),
             ('main_build', '=', True),
             ('team_id', '=', self_brw.team_id.id)])
-        if other_ids:
+        if other_ids and self_brw.main_build:
             raise osv.except_osv(
                 _('Invalid Action!'),
                 _('The Team {0} can only contain one prebuild marked as\
@@ -207,7 +207,7 @@ class runbot_prebuild(osv.osv):
 
     _constraints = [
         (_check_single_main, "Error: Only one build can be main",
-            ['main_build'])
+            ['main_build', 'team_id'])
     ]
     # TODO: Add constraint that add prebuild_lines of least one main repo type
     # TODO: Add related to repo.type store=True
