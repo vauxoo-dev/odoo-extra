@@ -271,8 +271,9 @@
                                 <img class="img-responsive center-block" t-att-src="team.bg_image_url" t-att-style="'height: 128px;background:url({image}) center center no-repeat, {color}; backgorund-size: cover'.format(color=team.color or '#fff', image=team.bg_image_url)"/>
                             </a>
                         </div>
-                        <div class="panel-footer">
+                        <div class="panel-footer" style="bottom: -155px; position: relative;">
                             <span class="label label-success"><t t-raw="team.jobs_running"/> Jobs Running</span>
+                            <img src="https://travis-ci.org/Vauxoo/addons-vauxoo.svg?branch=8.0"/>
                         </div>
                     </div>
                     </t>
