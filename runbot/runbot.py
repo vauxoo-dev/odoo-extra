@@ -348,6 +348,15 @@ class runbot_repo(osv.osv):
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
 
         for name, sha, date, author, author_email, subject, committer, committer_email in refs:
+            
+
+
+
+            # skip build for old branches
+            if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                continue
+
+
             # create or get branch
             branch_ids = Branch.search(cr, uid, [('repo_id', '=', repo.id), ('name', '=', name)])
             if branch_ids:
@@ -356,9 +365,8 @@ class runbot_repo(osv.osv):
                 _logger.debug('repo %s found new branch %s', repo.name, name)
                 branch_id = Branch.create(cr, uid, {'repo_id': repo.id, 'name': name})
             branch = Branch.browse(cr, uid, [branch_id], context=context)[0]
-            # skip build for old branches
-            if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
-                continue
+
+
             # create build (and mark previous builds as skipped) if not found
             build_ids = Build.search(cr, uid, [('branch_id', '=', branch.id), ('name', '=', sha)])
             if not build_ids:
