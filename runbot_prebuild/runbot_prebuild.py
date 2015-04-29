@@ -34,6 +34,9 @@ import werkzeug
 from collections import OrderedDict
 from random import choice
 
+import dateutil.parser
+import datetime
+
 from openerp.addons.runbot.runbot import RunbotController
 from openerp.addons.runbot.runbot import flatten
 from openerp.http import request
@@ -290,9 +293,12 @@ class runbot_prebuild(osv.osv):
                     _logger.info("get last commit info for check new commit")
                     refs = repo_pool.get_ref_data(
                         cr, uid, [branch.repo_id.id], branch.name,
-                        fields=['objectname'], context=context)
+                        fields=['objectname', 'committerdate:iso8601'], context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
+                        if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                            _logger.debug("skip 'create_prebuild_new_commit' for old branches")
+                            continue
                         sha = ref_data['objectname']
                         build_line_with_sha_ids = build_line_pool.search(cr,
                             uid, [('branch_id', '=', branch.id),
@@ -341,7 +347,13 @@ class runbot_prebuild(osv.osv):
                         if build_line_pr_ids:
                             # if exist build of pr no create new one
                             continue
-
+                        refs = branch_pr.repo_id.get_ref_data(branch_pr.name,
+                            fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
+                        refs = len(refs) >= 1 and refs[0] or False
+                        if refs:
+                            if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                               _logger.debug("skip 'create_build_pr' for old branches")
+                               continue
                         # If not exist build of this pr then create one
                         replace_branch_info = {prebuild_line.branch_id.id: {
                             'branch_id': branch_pr.id,

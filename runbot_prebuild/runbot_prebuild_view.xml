@@ -485,6 +485,8 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
                 <field name="full_name"/>
+                <field name="last_change_date"/>
+                <field name="last_sha"/>
             </xpath>
         </field>
     </record>
@@ -495,6 +497,8 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
                 <field name="full_name"/>
+                <field name="last_change_date"/>
+                <field name="last_sha"/>
             </xpath>
         </field>
     </record>

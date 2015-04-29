@@ -33,6 +33,9 @@ import shutil
 import logging
 import glob
 
+import datetime
+import dateutil.parser
+
 from openerp.addons.runbot.runbot import mkdirs, decode_utf, run
 from openerp.addons.runbot.runbot import RunbotController
 from openerp import http
@@ -152,7 +155,9 @@ class runbot_branch(osv.osv):
                 'runbot.branch': (lambda self, cr, uid, ids, c={}: ids,
                     ['name'], 50),
                 'runbot.repo': (_get_name_repo, ['name', ], 50),
-            })
+            }),
+        'last_change_date': fields.datetime('Last change'),
+        'last_sha': fields.char('Last sha'),
     }
 
 
@@ -457,26 +462,36 @@ class runbot_repo(osv.osv):
         branch_pool = self.pool.get('runbot.branch')
         branch_ids = []
         repo_id_ref_dict = self.get_ref_data(cr, uid, ids, ref=ref,
-            fields=['refname', 'objectname'], context=context)
+            fields=['refname', 'objectname', 'committerdate:iso8601'], context=context)
         for repo_id in repo_id_ref_dict.keys():
             for refs in repo_id_ref_dict[repo_id]:
                 name = refs.get('refname') or False
                 if name:
-                    branch_ids = branch_pool.search(cr, uid,
-                        [('repo_id', '=', repo_id), ('name', '=', name)])
-                    if not branch_ids:
+                    current_branch_ids = branch_pool.search(cr, uid,
+                        [('repo_id', '=', repo_id), ('name', '=', name)], limit=1)
+                    current_branch_id = current_branch_ids and current_branch_ids[0] or False
+                    if not current_branch_id:
                         _logger.debug(
                             'repo id %s found new branch %s', repo_id, name)
+                        if dateutil.parser.parse(refs.get('committerdate:iso8601')[:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                            _logger.debug("skip 'create_branches' for old branches")
+                            continue
                         try:
-                            branch_id = branch_pool.create(
+                            current_branch_id = branch_pool.create(
                                 cr, uid, {'repo_id': repo_id, 'name': name})
-                            branch_ids.append(branch_id)
+                            branch_ids.append(current_branch_id)
                         except:
                             # cron is executed for a ir.cron or button.
                             # This make create from different cursor.
                             # This make a error of unique branch name in same
                             # repo_id
                             pass
+                    # validate if branch was created or found to update last date and sha
+                    if current_branch_id:
+                        branch_pool.write(
+                            cr, uid, [current_branch_id],
+                            {'last_sha': refs.get('objectname'), 'last_change_date': refs.get('committerdate:iso8601')},
+                            context=context)
         return branch_ids
 
     def git(self, cr, uid, ids, cmd, context=None):
