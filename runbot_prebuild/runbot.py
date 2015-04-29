@@ -474,7 +474,7 @@ class runbot_repo(osv.osv):
                         _logger.debug(
                             'repo id %s found new branch %s', repo_id, name)
                         if dateutil.parser.parse(refs.get('committerdate:iso8601')[:19]) + datetime.timedelta(30) < datetime.datetime.now():
-                            # skip build for old branches
+                            _logger.debug("skip 'create_branches' for old branches")
                             continue
                         try:
                             current_branch_id = branch_pool.create(

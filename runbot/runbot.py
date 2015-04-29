@@ -348,12 +348,11 @@ class runbot_repo(osv.osv):
         refs = [[decode_utf(field) for field in line.split('\x00')] for line in git_refs.split('\n')]
 
         for name, sha, date, author, author_email, subject, committer, committer_email in refs:
-            
-
-
 
             # skip build for old branches
-            if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now():
+            if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now() \
+               and not name.startswith('refs/heads'):
+                _logger.debug("skip 'update_git' for old branches")
                 continue
 
 

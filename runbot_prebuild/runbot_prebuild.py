@@ -296,8 +296,8 @@ class runbot_prebuild(osv.osv):
                         fields=['objectname', 'committerdate:iso8601'], context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
-                        # skip old branches
                         if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                            _logger.debug("skip 'create_prebuild_new_commit' for old branches")
                             continue
                         sha = ref_data['objectname']
                         build_line_with_sha_ids = build_line_pool.search(cr,
@@ -352,7 +352,7 @@ class runbot_prebuild(osv.osv):
                         refs = len(refs) >= 1 and refs[0] or False
                         if refs:
                             if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
-                               # skip build for old branches
+                               _logger.debug("skip 'create_build_pr' for old branches")
                                continue
                         # If not exist build of this pr then create one
                         replace_branch_info = {prebuild_line.branch_id.id: {
