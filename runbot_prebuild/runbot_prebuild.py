@@ -355,6 +355,9 @@ class runbot_prebuild(osv.osv):
                                _logger.debug("skip 'create_build_pr' for old branches")
                                continue
                         # If not exist build of this pr then create one
+                        if branch_pr.state == 'closed':
+                            # If branch pr is closed then skip to create build
+                            continue
                         replace_branch_info = {prebuild_line.branch_id.id: {
                             'branch_id': branch_pr.id,
                             'reason_ok': True,
