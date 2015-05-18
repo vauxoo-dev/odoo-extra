@@ -235,7 +235,7 @@ class runbot_build(osv.osv):
         'from_main_prebuild_ok': fields.boolean('', copy=True,
             help="This build was created by a main prebuild?"
             "\nTrue: Then you will show at start on qweb"),
-        'prebuild_id': fields.many2one('runbot.prebuild',
+        'prebuild_id': fields.many2one('runbot.prebuild', ondelete='cascade',
             string='Runbot Pre-Build', required=False,
             help="This is the origin of instance data.", copy=True),
         'line_ids': fields.one2many('runbot.build.line', 'build_id',
