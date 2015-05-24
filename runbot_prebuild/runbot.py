@@ -486,12 +486,6 @@ class runbot_repo(osv.osv):
                             # This make a error of unique branch name in same
                             # repo_id
                             pass
-                    # validate if branch was created or found to update last date and sha
-                    if current_branch_id:
-                        branch_pool.write(
-                            cr, uid, [current_branch_id],
-                            {'last_sha': refs.get('objectname'), 'last_change_date': refs.get('committerdate:iso8601')},
-                            context=context)
         return branch_ids
 
     def git(self, cr, uid, ids, cmd, context=None):
