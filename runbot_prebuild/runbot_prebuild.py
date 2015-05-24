@@ -730,7 +730,7 @@ class RunbotController(RunbotController):
         res = super(RunbotController, self).build(
             build_id=build_id, search=search, **post)
         build_brw = registry['runbot.build'].browse(cr, uid, int(build_id))
-        if build_brw.team_id.name:
+        if build_brw and build_brw.team_id and build_brw.team_id.name:
             res.qcontext.update({'team': build_brw.team_id})
         return res
 
