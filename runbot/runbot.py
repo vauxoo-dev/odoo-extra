@@ -326,6 +326,9 @@ class runbot_repo(osv.osv):
         _logger.debug('repo %s updating branches', repo.name)
         Build = self.pool['runbot.build']
         Branch = self.pool['runbot.branch']
+        # days to check branches
+        icp = self.pool['ir.config_parameter']
+        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
 
         if not os.path.isdir(os.path.join(repo.path)):
             os.makedirs(repo.path)
@@ -350,7 +353,7 @@ class runbot_repo(osv.osv):
         for name, sha, date, author, author_email, subject, committer, committer_email in refs:
 
             # skip build for old branches
-            if dateutil.parser.parse(date[:19]) + datetime.timedelta(30) < datetime.datetime.now() \
+            if dateutil.parser.parse(date[:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now() \
                and not name.startswith('refs/heads'):
                 _logger.debug("skip 'update_git' for old branches")
                 continue

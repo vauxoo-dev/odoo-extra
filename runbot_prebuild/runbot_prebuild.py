@@ -329,6 +329,8 @@ class runbot_prebuild(osv.osv):
         new_build_ids = []
         branch_pool = self.pool.get('runbot.branch')
         build_line_pool = self.pool.get('runbot.build.line')
+        icp = self.pool['ir.config_parameter']
+        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
         for prebuild in self.browse(cr, uid, ids, context=context):
             for prebuild_line in prebuild.module_branch_ids:
                 if prebuild_line.check_pr:
@@ -351,7 +353,7 @@ class runbot_prebuild(osv.osv):
                             fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
                         refs = len(refs) >= 1 and refs[0] or False
                         if refs:
-                            if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                            if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
                                _logger.debug("skip 'create_build_pr' for old branches")
                                continue
                         # If not exist build of this pr then create one
