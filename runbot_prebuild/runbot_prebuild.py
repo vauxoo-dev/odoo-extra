@@ -262,6 +262,8 @@ class runbot_prebuild(osv.osv):
         repo_pool = self.pool.get('runbot.repo')
         branch_pool = self.pool.get('runbot.branch')
         build_new_ids = []
+        icp = self.pool['ir.config_parameter']
+        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
         for prebuild_id in ids:
             build_ids = build_pool.search(cr, uid, [
                 ('prebuild_id', 'in', [prebuild_id]),
@@ -296,7 +298,7 @@ class runbot_prebuild(osv.osv):
                         fields=['objectname', 'committerdate:iso8601'], context=context)
                     if refs and refs[branch.repo_id.id]:
                         ref_data = refs[branch.repo_id.id][0]
-                        if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(30) < datetime.datetime.now():
+                        if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
                             _logger.debug("skip 'create_prebuild_new_commit' for old branches")
                             continue
                         sha = ref_data['objectname']
