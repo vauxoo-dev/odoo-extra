@@ -254,6 +254,9 @@
                 <xpath expr="//field[@name='url']" position="after">
                     <field name="team_id"/>
                 </xpath>
+                <xpath expr="//button[@name='cron']" position="after">
+                    <button name="update_by_ids" type="object" string="Update this repo" groups="runbot.group_runbot_admin"/>
+                </xpath>
             </field>
         </record>
     <!-- Templates -->
