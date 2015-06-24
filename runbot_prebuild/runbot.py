@@ -483,11 +483,17 @@ class runbot_repo(osv.osv):
                     if not current_branch_id:
                         _logger.debug(
                             'repo id %s found new branch %s', repo_id, name)
-                        try:
+                        if True:#try:
                             current_branch_id = branch_pool.create(
-                                cr, uid, {'repo_id': repo_id, 'name': name})
+                                cr, uid, {
+                                    'repo_id': repo_id,
+                                    'name': name,
+                                    'last_sha': refs.get('objectname'),
+                                    'last_change_date': refs.get('committerdate:iso8601')
+                                }
+                            )
                             branch_ids.append(current_branch_id)
-                        except:
+                        #except:
                             # cron is executed for a ir.cron or button.
                             # This make create from different cursor.
                             # This make a error of unique branch name in same
@@ -652,6 +658,7 @@ class runbot_repo(osv.osv):
             context = {}
         if ids is None:
             ids = []
+        #import pdb;pdb.set_trace()
         # Clone first time of all branches
         context2 = context.copy()
         context2.update({'clone_only': True})
@@ -716,7 +723,7 @@ class runbot_repo(osv.osv):
                              for prebuild_line_data in prebuild_line_datas]))
 
         # fetch repo
-        self.fetch_git(cr, uid, repo_ids, context=context)
+        # self.fetch_git(cr, uid, repo_ids, context=context)  # Really needs it?
 
         # create build from prebuild of new commit
         prebuild_pool.create_prebuild_new_commit(

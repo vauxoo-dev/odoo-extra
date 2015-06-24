@@ -45,6 +45,7 @@ from openerp.addons.website.models.website import slug
 from openerp.addons.website_sale.controllers.main import QueryURL
 from openerp import SUPERUSER_ID
 from openerp import tools
+from openerp.fields import Datetime as FieldDatetime
 
 _logger = logging.getLogger(__name__)
 
@@ -287,21 +288,26 @@ class runbot_prebuild(osv.osv):
                 # Get all branches from build_line of this prebuild_sticky
                 build_line_datas = build_line_pool.read(
                     cr, uid, build_line_ids, ['branch_id'], context=context)
+                # TODO: Refactory this code. Why we need all branches of a build.?
                 branch_ids = list(
                     set([r['branch_id'][0] for r in build_line_datas]))
                 # Get last commit and search it as sha of build line
                 for branch in branch_pool.browse(cr, uid, branch_ids,
                                                  context=context):
-                    _logger.info("get last commit info for check new commit")
-                    refs = repo_pool.get_ref_data(
-                        cr, uid, [branch.repo_id.id], branch.name,
-                        fields=['objectname', 'committerdate:iso8601'], context=context)
-                    if refs and refs[branch.repo_id.id]:
-                        ref_data = refs[branch.repo_id.id][0]
-                        if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
+                    #_logger.info("get last commit info for check new commit")
+                    #refs = repo_pool.get_ref_data(
+                    #    cr, uid, [branch.repo_id.id], branch.name,
+                    #    fields=['objectname', 'committerdate:iso8601'], context=context)
+                    #if refs and refs[branch.repo_id.id]:
+                    #    ref_data = refs[branch.repo_id.id][0]
+                    #    if dateutil.parser.parse(ref_data['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
+                    #        _logger.debug("skip 'create_prebuild_new_commit' for old branches")
+                    #        continue
+                    #    sha = ref_data['objectname'] 
+                        if FieldDatetime.from_string(branch.last_change_date) + datetime.timedelta(days_to_check) < datetime.datetime.now():
                             _logger.debug("skip 'create_prebuild_new_commit' for old branches")
                             continue
-                        sha = ref_data['objectname']
+                        sha = branch.last_sha
                         build_line_with_sha_ids = build_line_pool.search(cr,
                             uid, [('branch_id', '=', branch.id),
                                 ('build_id', 'in', build_ids),
@@ -332,14 +338,19 @@ class runbot_prebuild(osv.osv):
         branch_pool = self.pool.get('runbot.branch')
         build_line_pool = self.pool.get('runbot.build.line')
         icp = self.pool['ir.config_parameter']
-        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
-        for prebuild in self.browse(cr, uid, ids, context=context):
+        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30)) 
+        date_min_to_check = FieldDatetime.to_string(datetime.datetime.now() - datetime.timedelta(days_to_check))
+        for prebuild in self.browse(cr, uid, ids, context=context): 
             for prebuild_line in prebuild.module_branch_ids:
                 if prebuild_line.check_pr:
+                    #if prebuild.id == 52 and prebuild_line.branch_id.id == 12600:
+                        #import pdb;pdb.set_trace()
                     branch_pr_ids = branch_pool.search(
                         cr, uid, [
-                            ('branch_base_id', '=',
-                            prebuild_line.branch_id.id)], context=context)
+                            ('branch_base_id', '=', prebuild_line.branch_id.id),
+                            ('state', '<>', 'closed'),
+                            ('last_change_date', '>=', date_min_to_check)
+                    ], context=context)
                     # Get build of this prebuild
                     for branch_pr in branch_pool.browse(cr, uid,
                         branch_pr_ids, context=context):
@@ -347,21 +358,24 @@ class runbot_prebuild(osv.osv):
                             ('branch_id', '=', branch_pr.id),
                             ('build_id.prebuild_id', '=', prebuild.id),
                             ('build_id.change_prebuild_ok', '<>', True),
-                        ], context=context)
+                        ], limit=1, context=context)
                         if build_line_pr_ids:
                             # if exist build of pr no create new one
+                            # TODO: create new build if sha is changed
                             continue
-                        refs = branch_pr.repo_id.get_ref_data(branch_pr.name,
-                            fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
-                        refs = len(refs) >= 1 and refs[0] or False
-                        if refs:
-                            if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
-                               _logger.debug("skip 'create_build_pr' for old branches")
-                               continue
+                        # refs = branch_pr.repo_id.get_ref_data(branch_pr.name,
+                        #    fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
+                        #refs = len(refs) >= 1 and refs[0] or False
+                        #if refs:
+                        #    if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
+                        #       _logger.debug("skip 'create_build_pr' for old branches")
+                        #       continue
                         # If not exist build of this pr then create one
-                        if branch_pr.state == 'closed':
+                        #if branch_pr.state == 'closed':
                             # If branch pr is closed then skip to create build
-                            continue
+                        #    continue
+                        #if FieldDatetime.from_string(branch_pr.last_change_date) + datetime.timedelta(days_to_check) < datetime.datetime.now():
+                        #    _logger.debug("skip 'create_build_pr' for old branches")
                         replace_branch_info = {prebuild_line.branch_id.id: {
                             'branch_id': branch_pr.id,
                             'reason_ok': True,
