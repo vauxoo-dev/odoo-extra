@@ -405,7 +405,6 @@ class runbot_repo(osv.osv):
         workers = int(icp.get_param(cr, uid, 'runbot.workers', default=6))
         running_max = int(icp.get_param(cr, uid, 'runbot.running_max', default=75))
         host = fqdn()
-
         Build = self.pool['runbot.build']
         domain = []
         if build_ids:
@@ -424,7 +423,6 @@ class runbot_repo(osv.osv):
         # launch new tests
         testing = Build.search_count(cr, uid, domain_host + [('state', '=', 'testing')])
         pending = Build.search_count(cr, uid, domain + [('state', '=', 'pending')])
-
         while testing < workers and pending > 0:
 
             # find sticky pending build if any, otherwise, last pending (by id, not by sequence) will do the job
@@ -486,8 +484,9 @@ class runbot_repo(osv.osv):
         Build.kill(cr, uid, build_ids)
 
     def cron(self, cr, uid, ids=None, context=None):
-        ids = self.search(cr, uid, [('auto', '=', True)], context=context)
-        #self.update(cr, uid, ids, context=context)  #Created by other cron
+        # ids = self.search(cr, uid, [('auto', '=', True)], context=context)
+        ids = None # Force the use of prebuild without default module. TODO: use both methods
+        # self.update(cr, uid, ids, context=context)  #Created by other cron
         self.scheduler(cr, uid, ids, context=context)
         self.reload_nginx(cr, uid, context=context)
 
@@ -932,7 +931,6 @@ class runbot_build(osv.osv):
                 #"--db_host=%s" % config['db_host'],
                 #"--db_port=%s" % config['db_port'],
             ]
-	    #import pdb;pdb.set_trace()
             if config['db_user'] and config['db_user'] != 'False':
                 import getpass
 		if config['db_user'] != getpass.getuser():
