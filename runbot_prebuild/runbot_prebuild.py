@@ -319,6 +319,26 @@ class runbot_prebuild(osv.osv):
                             build_new_ids.append(build_new_id)
         return build_new_ids
 
+    def get_branch_remote_names(self, cr, uid, prebuild, context=None):
+        branch_pool = self.pool.get('runbot.branch')
+        br_rm_name = {}
+        for prebuild_line in prebuild.module_branch_ids:
+            if prebuild_line.check_pr:
+                branch_pr_ids = branch_pool.search(
+                    cr, uid, [
+                        ('branch_base_id', '=', prebuild_line.branch_id.id)],
+                    context=context)
+                for branch_pr in branch_pool.browse(
+                        cr, uid, branch_pr_ids, context=context):
+                    if branch_pr.branch_remote_name in br_rm_name.keys():
+                        tmp_list = br_rm_name.get(branch_pr.branch_remote_name)
+                        tmp_list.append(branch_pr)
+                    else:
+                        br_rm_name[branch_pr.branch_remote_name] = [branch_pr]
+            else:
+                continue
+        return br_rm_name
+
     def create_build_pr(self, cr, uid, ids, context=None):
         """
         Create build from pull request with build line check_pr=True
@@ -328,57 +348,67 @@ class runbot_prebuild(osv.osv):
         @param ids: list of ids for which name should be read
         @param context: context arguments, like lang, time zone
         """
+        stiky_ids = ids
         new_build_ids = []
-        branch_pool = self.pool.get('runbot.branch')
         build_line_pool = self.pool.get('runbot.build.line')
         icp = self.pool['ir.config_parameter']
-        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
-        for prebuild in self.browse(cr, uid, ids, context=context):
-            for prebuild_line in prebuild.module_branch_ids:
-                if prebuild_line.check_pr:
-                    branch_pr_ids = branch_pool.search(
-                        cr, uid, [
-                            ('branch_base_id', '=',
-                            prebuild_line.branch_id.id)], context=context)
-                    # Get build of this prebuild
-                    for branch_pr in branch_pool.browse(cr, uid,
-                        branch_pr_ids, context=context):
-                        build_line_pr_ids = build_line_pool.search(cr, uid, [
-                            ('branch_id', '=', branch_pr.id),
-                            ('build_id.prebuild_id', '=', prebuild.id),
-                            ('build_id.change_prebuild_ok', '<>', True),
-                        ], context=context)
-                        if build_line_pr_ids:
-                            # if exist build of pr no create new one
-                            continue
-                        refs = branch_pr.repo_id.get_ref_data(branch_pr.name,
-                            fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
-                        refs = len(refs) >= 1 and refs[0] or False
-                        if refs:
-                            if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
-                               _logger.debug("skip 'create_build_pr' for old branches")
-                               continue
-                        # If not exist build of this pr then create one
-                        if branch_pr.state == 'closed':
-                            # If branch pr is closed then skip to create build
-                            continue
-                        replace_branch_info = {prebuild_line.branch_id.id: {
-                            'branch_id': branch_pr.id,
-                            'reason_ok': True,
-                            'reason_pr_ok': True,
-                        }}
-                        new_name = prebuild.name + \
-                            ' [' + branch_pr.complete_name + ']'
-                        build_created_ids = self.create_build(cr, uid,
-                            [prebuild.id], default_data={
-                            # Only for group by in qweb view
-                            'branch_id': branch_pr.id,
-                            'name': new_name,
-                            'author': new_name,  # TODO: Get this value.
-                            'subject': new_name,  # TODO: Get this value
-                            }, replace_branch_info=replace_branch_info,
-                            context=context)
-                        new_build_ids.extend(build_created_ids)
+        days_to_check = int(icp.get_param(
+            cr, uid, 'runbot.days_to_check', default=30))
+        for prebuild in self.browse(cr, uid, stiky_ids, context=context):
+            teams_branches = self.get_branch_remote_names(
+                cr, uid, prebuild, context=context)
+            for remote_name in teams_branches.keys():
+                branch_prs = teams_branches[remote_name]
+                branch_ids = [bp.id for bp in branch_prs]
+                build_line_pr_ids = build_line_pool.search(cr, uid, [
+                    ('branch_id', 'in', branch_ids),
+                    ('build_id.prebuild_id', '=', prebuild.id),
+                    ('build_id.change_prebuild_ok', '<>', True),
+                ], context=context)
+                if build_line_pr_ids:
+                    # if exist build of pr no create new one
+                    continue
+                flag = False
+                for branch_pr in branch_prs:
+                    # If not exist build of this pr then create one
+                    if branch_pr.state == 'closed':
+                        flag = True
+                        # If branch pr is closed then skip to create build
+                        break
+                    refs = branch_pr.repo_id.get_ref_data(
+                        branch_pr.name,
+                        fields=['committerdate:iso8601'])[branch_pr.repo_id.id]
+                    refs = len(refs) >= 1 and refs[0] or False
+                    if refs:
+                        if dateutil.parser.parse(
+                                refs['committerdate:iso8601'][:19]) + datetime.\
+                                timedelta(days_to_check) < datetime.\
+                                datetime.now():
+                            _logger.debug(
+                                "skip 'create_build_pr' for old branches")
+                            flag = True
+                            break
+                if flag:
+                    continue
+                replace_branch_info = {}
+                for branch in teams_branches[remote_name]:
+                    replace_branch_info[branch.branch_base_id.id] = {
+                        'branch_id': branch.id,
+                        'reason_ok': True,
+                        'reason_pr_ok': True,
+                    }
+                new_name = prebuild.name + \
+                    ' [' + remote_name + ']'
+                build_created_ids = self.create_build(
+                    cr, uid, [prebuild.id], default_data={
+                        # Only for group by in qweb view
+                        'branch_id': branch_pr.id,
+                        'name': new_name,
+                        'author': new_name,  # TODO: Get this value.
+                        'subject': new_name,  # TODO: Get this value
+                    }, replace_branch_info=replace_branch_info,
+                    context=context)
+                new_build_ids.extend(build_created_ids)
         return new_build_ids
 
     def create_main_build(self, cr, uid, ids, context=None):
@@ -393,11 +423,12 @@ class runbot_prebuild(osv.osv):
         default_data = {
             'from_main_prebuild_ok': True,
         }
-        return self.create_build(cr, uid, ids, default_data=default_data,
-            context=context)
+        return self.create_build(
+            cr, uid, ids, default_data=default_data, context=context)
 
-    def create_build(self, cr, uid, ids, default_data=None,
-        replace_branch_info=None, context=None):
+    def create_build(
+            self, cr, uid, ids, default_data=None,
+            replace_branch_info=None, context=None):
         """
         Create a new build from a prebuild.
         @replace_branch_info: Get a dict data for replace a old branch for
@@ -455,7 +486,7 @@ class runbot_prebuild(osv.osv):
                 # Important field for custom build and custom checkout
                 'prebuild_id': prebuild.id,
                 'team_id': prebuild and prebuild.team_id and\
-                    prebuild.team_id.id or False,
+                prebuild.team_id.id or False,
                 'line_ids': build_line_datas,
                 'lang': prebuild.lang,
                 'pylint_conf_path': prebuild.pylint_conf_path,
@@ -467,6 +498,7 @@ class runbot_prebuild(osv.osv):
             build_obj.fetch_build_lines(cr, uid, [build_id], context=context)
             build_ids.append(build_id)
         return build_ids
+
 
 class runbot_build_line(osv.osv):
     '''
