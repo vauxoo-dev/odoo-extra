@@ -463,8 +463,18 @@ class runbot_repo(osv.osv):
         branch_ids = []
         repo_id_ref_dict = self.get_ref_data(cr, uid, ids, ref=ref,
             fields=['refname', 'objectname', 'committerdate:iso8601'], context=context)
+        # days to check branches
+        icp = self.pool['ir.config_parameter']
+        days_to_check = int(icp.get_param(cr, uid, 'runbot.days_to_check', default=30))
         for repo_id in repo_id_ref_dict.keys():
             for refs in repo_id_ref_dict[repo_id]:
+                if dateutil.parser.parse(refs['committerdate:iso8601'][:19]) + datetime.timedelta(days_to_check) < datetime.datetime.now():
+                    _logger.debug(
+                        "skip 'create_branches' for old branches"
+                        " Ordered by date then first old branch found is a break"
+                    )
+                    break
+
                 name = refs.get('refname') or False
                 if name:
                     current_branch_ids = branch_pool.search(cr, uid,
@@ -473,9 +483,6 @@ class runbot_repo(osv.osv):
                     if not current_branch_id:
                         _logger.debug(
                             'repo id %s found new branch %s', repo_id, name)
-                        if dateutil.parser.parse(refs.get('committerdate:iso8601')[:19]) + datetime.timedelta(30) < datetime.datetime.now():
-                            _logger.debug("skip 'create_branches' for old branches")
-                            continue
                         try:
                             current_branch_id = branch_pool.create(
                                 cr, uid, {'repo_id': repo_id, 'name': name})
@@ -530,6 +537,8 @@ class runbot_repo(osv.osv):
                       'authorname', 'subject', 'committername']
         if rename_fields is None:
             rename_fields = fields
+        if 'committerdate:iso8601' not in fields:
+            fields.append('committerdate:iso8601')
         if isinstance(ref, str) or isinstance(ref, basestring):
             ref = ref.split(',')
         res = {}
@@ -612,6 +621,22 @@ class runbot_repo(osv.osv):
         repo_ids = list(set([prebuild_line_data['repo_id'][0]
                              for prebuild_line_data in prebuild_line_datas]))
         return repo_ids
+
+    def update_by_ids(self, cr, uid, ids, context=None):
+        if context is None:
+            context = {}
+        # Clone first time
+        context2 = context.copy()
+        context2.update({'clone_only': True})
+        self.fetch_git(
+            cr, uid, ids, context=context2)
+
+        # Fetch repo
+        self.fetch_git(
+            cr, uid, ids, context=context)
+        new_branch_ids = self.create_branches(
+            cr, uid, ids, context=context)
+        return ids
 
     def update(self, cr, uid, ids=None, context=None):
         '''
