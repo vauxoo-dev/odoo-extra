@@ -345,6 +345,7 @@ class runbot_prebuild(osv.osv):
                         branch_pr_ids, context=context):
                         build_line_pr_ids = build_line_pool.search(cr, uid, [
                             ('branch_id', '=', branch_pr.id),
+                            ('sha', '=', branch_pr.last_sha),
                             ('build_id.prebuild_id', '=', prebuild.id),
                             ('build_id.change_prebuild_ok', '<>', True),
                         ], context=context)
