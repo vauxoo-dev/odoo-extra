@@ -932,7 +932,6 @@ class runbot_build(osv.osv):
                 #"--db_host=%s" % config['db_host'],
                 #"--db_port=%s" % config['db_port'],
             ]
-	    #import pdb;pdb.set_trace()
             if config['db_user'] and config['db_user'] != 'False':
                 import getpass
 		if config['db_user'] != getpass.getuser():
@@ -1213,14 +1212,8 @@ class runbot_build(osv.osv):
 
     def cleanup(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
-            build.logger('killing %s', build.pid)
-            try:
-                if not (build.pid==os.getpid() or build.pid==os.getppid() or build.pid==0):
-                    os.killpg(build.pid, signal.SIGKILL)
-            except OSError:
-                pass
-            build.write({'state': 'done'})
-            cr.commit()
+            self.pg_dropdb(cr, uid, "%s-base" % build.dest)
+            self.pg_dropdb(cr, uid, "%s-all" % build.dest)
             if os.path.isdir(build.path()):
                 for item in os.listdir( build.path() ):
                     path_item = os.path.join(build.path(), item)
