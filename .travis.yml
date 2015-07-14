@@ -17,7 +17,9 @@ install:
   - export PATH=${HOME}/maintainer-quality-tools/travis:${PATH}
   - travis_install_nightly
   - sudo apt-get install python-matplotlib # temporary dependency https://github.com/odoo/odoo-extra/pull/3
+  - sudo pip install ipaddress
   - git clone --single-branch --depth=1 https://github.com/vauxoo/runbot-addons.git -b 8.0-vauxoo ${HOME}/runbot-addons
+  - git clone --single-branch --depth=1 https://github.com/Vauxoo/server-tools -b 8.0 ${HOME}/server-tools
  
 script:
   - travis_run_tests

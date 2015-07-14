@@ -499,6 +499,7 @@ class runbot_repo(osv.osv):
                             cr, uid, [current_branch_id],
                             {'last_sha': refs.get('objectname'), 'last_change_date': refs.get('committerdate:iso8601')},
                             context=context)
+                        branch_ids.append(current_branch_id)
         return branch_ids
 
     def git(self, cr, uid, ids, cmd, context=None):

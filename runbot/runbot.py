@@ -230,13 +230,13 @@ class runbot_repo(osv.osv):
     _columns = {
         'name': fields.char('Repository', required=True),
         'path': fields.function(_get_path, type='char', string='Directory', readonly=1),
-        'base': fields.function(_get_url_info, type='char', string='Base URL', readonly=1, multi='url_info'),
-        'host': fields.function(_get_url_info, type='char', string='Host from URL', readonly=1, multi='url_info'),
-        'owner': fields.function(_get_url_info, type='char', string='Owner from URL', readonly=1, multi='url_info'),
-        'repo': fields.function(_get_url_info, type='char', string='Repo from URL', readonly=1, multi='url_info'),
-        'host_driver': fields.function(_get_url_info, type='char', string='Host driver from URL', readonly=1, multi='url_info'),
-        'host_url': fields.function(_get_url_info, type='char', string='URL host', readonly=1, multi='url_info'),
-        'url': fields.function(_get_url_info, type='char', string='URL repo', readonly=1, multi='url_info'),
+        'base': fields.function(_get_url_info, type='char', string='Base URL', readonly=1, multi='url_info', store=True),
+        'host': fields.function(_get_url_info, type='char', string='Host from URL', readonly=1, multi='url_info', store=True),
+        'owner': fields.function(_get_url_info, type='char', string='Owner from URL', readonly=1, multi='url_info', store=True),
+        'repo': fields.function(_get_url_info, type='char', string='Repo from URL', readonly=1, multi='url_info', store=True),
+        'host_driver': fields.function(_get_url_info, type='char', string='Host driver from URL', readonly=1, multi='url_info', store=True),
+        'host_url': fields.function(_get_url_info, type='char', string='URL host', readonly=1, multi='url_info', store=True),
+        'url': fields.function(_get_url_info, type='char', string='URL repo', readonly=1, multi='url_info', store=True),
         'testing': fields.integer('Concurrent Testing'),
         'running': fields.integer('Concurrent Running'),
         'jobs': fields.char('Jobs'),
@@ -932,7 +932,6 @@ class runbot_build(osv.osv):
                 #"--db_host=%s" % config['db_host'],
                 #"--db_port=%s" % config['db_port'],
             ]
-	    #import pdb;pdb.set_trace()
             if config['db_user'] and config['db_user'] != 'False':
                 import getpass
 		if config['db_user'] != getpass.getuser():
@@ -1213,14 +1212,8 @@ class runbot_build(osv.osv):
 
     def cleanup(self, cr, uid, ids, context=None):
         for build in self.browse(cr, uid, ids, context=context):
-            build.logger('killing %s', build.pid)
-            try:
-                if not (build.pid==os.getpid() or build.pid==os.getppid() or build.pid==0):
-                    os.killpg(build.pid, signal.SIGKILL)
-            except OSError:
-                pass
-            build.write({'state': 'done'})
-            cr.commit()
+            self.pg_dropdb(cr, uid, "%s-base" % build.dest)
+            self.pg_dropdb(cr, uid, "%s-all" % build.dest)
             if os.path.isdir(build.path()):
                 for item in os.listdir( build.path() ):
                     path_item = os.path.join(build.path(), item)
