@@ -1245,6 +1245,9 @@ class RunbotController(http.Controller):
 
     @http.route(['/runbot/hook/<int:repo_id>'], type='http', auth="public", website=True)
     def hook(self, repo_id=None, **post):
+        if request.httprequest.data == '':
+            _logger.exception('Data of http request is empty :(. '
+                'This is necesary to use `secret` feature of github webook')
         # TODO if repo_id == None parse the json['repository']['ssh_url'] and find the right repo
         repo = request.registry['runbot.repo'].browse(request.cr, SUPERUSER_ID, [repo_id])
         repo.hook_time = datetime.datetime.now().strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT)
