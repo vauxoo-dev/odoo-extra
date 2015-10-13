@@ -10,6 +10,7 @@ import logging
 import operator
 import os
 import psycopg2
+import pprint
 import re
 import resource
 import shutil
@@ -1301,11 +1302,25 @@ class RunbotController(http.Controller):
 
         return request.render("runbot.repo", context)
 
-    @http.route(['/runbot/hook/<int:repo_id>'], type='http', auth="public", website=True)
+    @http.route(['/runbot/hook/<int:repo_id>', '/runbot/hook/org'], type='json', auth="public", website=True)
     def hook(self, repo_id=None, **post):
-        # TODO if repo_id == None parse the json['repository']['ssh_url'] and find the right repo
-        repo = request.registry['runbot.repo'].browse(request.cr, SUPERUSER_ID, [repo_id])
-        repo.hook_time = datetime.datetime.now().strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT)
+        if repo_id is None:
+            repo_data = request.jsonrequest.get('repository')
+            event = request.httprequest.headers.get("X-Github-Event")
+            if repo_data and event in ['push', 'pull_request']:
+                repo_domain = [
+                    '|', ('name', '=', repo_data['ssh_url']),
+                    ('name', '=', repo_data['clone_url']),
+                ]
+                repo = request.registry['runbot.repo'].search(
+                    request.cr, SUPERUSER_ID, repo_domain, limit=1)
+                repo_id = repo[0] if repo else None
+
+        if repo_id:
+            repo = request.registry['runbot.repo'].browse(request.cr, SUPERUSER_ID, [repo_id])
+            repo.hook_time = datetime.datetime.now().strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT)
+        else:
+            _logger.debug('Repo not found from request data: %s', pprint.pformat(request.jsonrequest)[:450])
         return ""
 
     @http.route(['/runbot/dashboard'], type='http', auth="public", website=True)
