@@ -8,6 +8,7 @@ import itertools
 import logging
 import operator
 import os
+import pprint
 import re
 import resource
 import shutil
@@ -275,11 +276,14 @@ class runbot_repo(osv.osv):
             run(['git', 'clone', '--bare', repo.name, repo.path])
 
         # check for mode == hook
-        fetch_time = os.path.getmtime(os.path.join(repo.path, 'FETCH_HEAD'))
-        if repo.mode == 'hook' and repo.hook_time and dt2time(repo.hook_time) < fetch_time:
-            t0 = time.time()
-            _logger.debug('repo %s skip hook fetch fetch_time: %ss ago hook_time: %ss ago', repo.name, int(t0 - fetch_time), int(t0 - dt2time(repo.hook_time)))
-            return
+        fname_fetch_head = os.path.join(repo.path, 'FETCH_HEAD')
+        if os.path.isfile(fname_fetch_head):
+            fetch_time = os.path.getmtime(fname_fetch_head)
+            if repo.mode == 'hook' and repo.hook_time and dt2time(repo.hook_time) < fetch_time:
+                t0 = time.time()
+                _logger.debug('repo %s skip hook fetch fetch_time: %ss ago hook_time: %ss ago',
+                              repo.name, int(t0 - fetch_time), int(t0 - dt2time(repo.hook_time)))
+                return
 
         repo.git(['gc', '--auto', '--prune=all'])
         repo.git(['fetch', '-p', 'origin', '+refs/heads/*:refs/heads/*'])
@@ -707,7 +711,7 @@ class runbot_build(osv.osv):
 
         mod_filter = lambda m: (
             m in available_modules and
-            (m in explicit_modules or (not m.startswith(('hw_', 'theme_'))
+            (m in explicit_modules or (not m.startswith(('hw_', 'theme_', 'l10n_'))
                                        and m not in blacklist_modules))
         )
         return uniq_list(filter(mod_filter, modules))
@@ -1240,11 +1244,27 @@ class RunbotController(http.Controller):
 
         return request.render("runbot.repo", context)
 
-    @http.route(['/runbot/hook/<int:repo_id>'], type='http', auth="public", website=True)
+    @http.route(['/runbot/hook/<int:repo_id>', '/runbot/hook/org'], type='json', auth="public", website=True)
     def hook(self, repo_id=None, **post):
-        # TODO if repo_id == None parse the json['repository']['ssh_url'] and find the right repo
-        repo = request.registry['runbot.repo'].browse(request.cr, SUPERUSER_ID, [repo_id])
-        repo.hook_time = datetime.datetime.now().strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT)
+        if repo_id is None:
+            repo_data = request.jsonrequest.get('repository')
+            event = request.httprequest.headers.get("X-Github-Event")
+            if repo_data and event in ['push', 'pull_request']:
+                repo_owner = repo_data['owner'].get('name') or repo_data['owner'].get('login')
+                repo_name = repo_data['name']
+                repo_domain = [
+                    '|', ('name', '=', 'git@github.com:%s/%s.git' % (repo_owner, repo_name)),
+                    ('name', '=', 'https://github.com/%s/%s.git' % (repo_owner, repo_name)),
+                ]
+                repo = request.registry['runbot.repo'].search(
+                    request.cr, SUPERUSER_ID, repo_domain, limit=1)
+                repo_id = repo[0] if len(repo) else None
+
+        if repo_id:
+            repo = request.registry['runbot.repo'].browse(request.cr, SUPERUSER_ID, [repo_id])
+            repo.hook_time = datetime.datetime.now().strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT)
+        else:
+            _logger.debug('Repo not found from request data: %s', pprint.pformat(request.jsonrequest)[:450])
         return ""
 
     @http.route(['/runbot/dashboard'], type='http', auth="public", website=True)
