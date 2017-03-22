@@ -1480,6 +1480,11 @@ class RunbotController(http.Controller):
         if not build.exists():
             return request.not_found()
 
+        try:
+            build.sudo(uid).check_access_rights('read')
+            build.sudo(uid).check_access_rule('read')
+        except openerp.exceptions.AccessError:
+            return request.not_found()
         real_build = build.duplicate_id if build.state == 'duplicate' else build
 
         # other builds
