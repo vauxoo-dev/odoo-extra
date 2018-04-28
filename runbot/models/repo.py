@@ -15,6 +15,9 @@ from odoo.modules.module import get_module_resource
 from odoo.tools import config
 from ..common import fqdn, dt2time
 
+SKIP_WORDS = ['[ci skip]', '[skip ci]']
+SKIP_WORDS_RE = re.compile("|".join(map(re.escape, SKIP_WORDS)))
+
 _logger = logging.getLogger(__name__)
 
 
@@ -170,6 +173,10 @@ class runbot_repo(models.Model):
             #        'repo_id': repo.id,
             #        'name': name})
             # keep for next version with a branch_ids field
+
+            # Skip the build for commit message as "[ci skip]"
+            if SKIP_WORDS_RE.search(subject.lower()):
+                continue
 
             if ref_branches.get(name):
                 branch_id = ref_branches[name]
