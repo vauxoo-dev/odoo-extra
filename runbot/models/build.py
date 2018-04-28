@@ -16,9 +16,6 @@ from odoo.exceptions import UserError
 from odoo.http import request
 from odoo.tools import config, appdirs
 
-SKIP_WORDS = ['[ci skip]', '[skip ci]']
-SKIP_WORDS_RE = re.compile("|".join(map(re.escape, SKIP_WORDS)))
-
 _re_error = r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (?:ERROR|CRITICAL) )|(?:Traceback \(most recent call last\):)$'
 _re_warning = r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ WARNING '
 re_job = re.compile('_job_\d')
@@ -91,17 +88,7 @@ class runbot_build(models.Model):
         if duplicate_id and not context.get('force_rebuild'):
             extra_info.update({'state': 'duplicate', 'duplicate_id': duplicate_id})
         build_id.write(extra_info)
-
-        # Skip from commit message
-        build._subject_skip()
         return build_id
-
-    def _subject_skip(self):
-        """Skip build if there is a commit message with one SKIP_WORDS"""
-        for build in self.filtered(lambda b:
-                                   SKIP_WORDS_RE.search(b.subject.lower())):
-            build._log('subject_skip', 'The commit message skipped this build')
-            build._skip()
 
     def _reset(self):
         self.write({'state': 'pending'})
